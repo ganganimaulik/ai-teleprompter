@@ -14,9 +14,9 @@ const MAX_BUFFER_DURATION  = 30;
 const NEW_BUFFER_SIZE      = 512;
 const MAX_NUM_PREV_BUFFERS = Math.ceil(SPEECH_PAD_SAMPLES / NEW_BUFFER_SIZE);
 
-const EAGER_PARTIAL_MS      = 1000;
+const EAGER_PARTIAL_MS      = 500;
 const EAGER_PARTIAL_SAMPLES = EAGER_PARTIAL_MS * (SAMPLE_RATE / 1000);
-const MAX_PARTIAL_EMITS     = 4;
+const MAX_PARTIAL_EMITS     = 8;
 
 let silero_vad;
 try {

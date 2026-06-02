@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, globalShortcut, systemPreferences } = require('electron');
+app.commandLine.appendSwitch('enable-unsafe-webgpu');
 const path = require('path');
 const http = require('http');
 const fs = require('fs');

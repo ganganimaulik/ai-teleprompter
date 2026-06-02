@@ -358,7 +358,8 @@ input:checked + .slider-toggle:before {
 
 /* ASR Live transcript logger */
 .panel-transcript {
-  flex: 1;
+  flex: 1.8;
+  min-height: 240px;
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -373,8 +374,8 @@ input:checked + .slider-toggle:before {
   border-radius: 12px;
   padding: 12px 16px;
   color: var(--text-secondary);
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 14px;
+  line-height: 1.6;
   overflow-y: auto;
   user-select: text;
   word-break: break-word;
@@ -531,14 +532,14 @@ input:checked + .slider-toggle:before {
   overflow: hidden;
   border: none;
   border-radius: 16px;
-  background: rgba(11, 12, 16, 0.4); /* subtle dark tint for readability */
-  backdrop-filter: blur(1px); /* minimal blur so it doesn't obstruct background apps */
+  background: rgba(11, 12, 16, 0.15); /* highly transparent to see background apps perfectly */
+  backdrop-filter: none; /* remove blur completely so background content remains sharp and readable */
   transition: border-color 0.3s ease, background 0.3s ease;
 }
 
 /* Highlight background when overlay is active (no borders) */
 .teleprompter-overlay-container.listening {
-  background: rgba(11, 12, 16, 0.65);
+  background: rgba(11, 12, 16, 0.28); /* subtle dark tint during tracking for minimum text contrast */
 }
 
 /* Scrolling Text Wrapper */
@@ -569,11 +570,11 @@ input:checked + .slider-toggle:before {
 }
 
 .teleprompter-text-content {
+  position: relative;
   text-align: center;
   font-family: var(--font-sans);
   font-weight: 500;
   line-height: 1.5;
-  transition: transform 0.25s cubic-bezier(0.1, 0.8, 0.2, 1);
   will-change: transform;
 }
 
@@ -581,19 +582,33 @@ input:checked + .slider-toggle:before {
 .word {
   display: inline-block;
   padding: 0 4px;
-  color: rgba(255, 255, 255, 0.35); /* faded by default */
+  color: rgba(255, 255, 255, 0.5); /* increased default visibility for upcoming text */
+  /* Drop-shadow outline guarantees readability on top of any background window (light or dark) */
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 1px 2px rgba(0, 0, 0, 0.9);
   transition: color 0.15s ease, transform 0.15s ease;
 }
 
+/* Text already read: extremely dim so it doesn't distract or cover background apps */
 .word.spoken {
-  color: var(--text-primary);
-  font-weight: 600;
-  text-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.15) !important;
+  font-weight: 400;
+  text-shadow: none; /* remove shadow/glow to maximize background visibility */
 }
 
+/* Speculative creep words: slightly brighter than standard upcoming words */
 .word.creep {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.85);
   font-weight: 500;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+/* Current active word styling */
+.word.current {
+  color: #ffffff !important;
+  font-weight: 700;
+  transform: scale(1.05);
+  /* A glowing cyan/accent drop shadow to clearly draw the reader's focus */
+  text-shadow: 0 0 12px rgba(0, 206, 201, 0.9), 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
 .word.shadow-curr {

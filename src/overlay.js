@@ -11,6 +11,7 @@ const state = {
   currentWordIndex: 0,
   creepTargetIndex: 0,
   shadowIndex: -1,
+  lastConfirmedWordIndex: -1,
   
   isRecording: false,
   lastSpeechTime: 0,
@@ -121,6 +122,11 @@ function renderScript(paragraphs, allWords) {
   // Set font size and mirror configuration
   updateVisualSettings();
   resetPosition();
+  
+  // Ensure the script scrolls to the first word (at the focus line) on start
+  requestAnimationFrame(() => {
+    scrollToCurrent(false);
+  });
 }
 
 function getWordSpan(id) {
@@ -137,12 +143,15 @@ function updateVisualSettings() {
   } else {
     dom.teleprompterContent.style.transform = `translateY(${_scrollCurrent}px)`;
   }
+  
+  movePillToWord(state.currentWordIndex);
 }
 
 function resetPosition() {
   state.currentWordIndex = 0;
   state.creepTargetIndex = 0;
   state.shadowIndex = -1;
+  state.lastConfirmedWordIndex = -1;
   state.creepFractional = 0;
 
   if (_scrollRafId) {
@@ -212,9 +221,11 @@ function scrollFrame(now) {
 
   // 2. Linear Interpolation of Scroll coordinates
   const diff = _scrollTarget - _scrollCurrent;
-  if (Math.abs(diff) < 0.15) {
-    _scrollCurrent = _scrollTarget;
-    _applyTransformRaw(_scrollCurrent);
+  if (Math.abs(diff) < 0.05) {
+    if (_scrollCurrent !== _scrollTarget) {
+      _scrollCurrent = _scrollTarget;
+      _applyTransformRaw(_scrollCurrent);
+    }
     
     // If not recording, we can stop the loop once aligned
     if (!state.isRecording) {
@@ -233,9 +244,6 @@ function _applyTransformRaw(ty) {
   dom.teleprompterContent.style.transform = state.settings.mirror
     ? `scaleX(-1) translateY(${ty}px)`
     : `translateY(${ty}px)`;
-  
-  // Re-adjust highlight pill bounds because translation changes bounds
-  movePillToWord(state.currentWordIndex);
 }
 
 function moveCreep(idx) {
@@ -406,12 +414,24 @@ function setupIpcListeners() {
 
     const smooth = update.scrollMode === 'snap';
     
+    // Smart Sync Snapping:
+    // 1. If it's an instant scroll mode (e.g. initial load, reset), we always snap.
+    // 2. If the confirmed index is past our current index, we snap (progress catchup or forward jump).
+    // 3. If the confirmed index went backward relative to the last confirmed index we saw,
+    //    we snap (manual seek backward).
+    // Otherwise, we do not snap (let speculative creep continue smoothly).
+    const isManualSeekBackward = update.currentWordIndex < state.lastConfirmedWordIndex;
+    const isForwardCatchup = update.currentWordIndex > state.currentWordIndex;
+    
+    state.lastConfirmedWordIndex = update.currentWordIndex;
+
     if (update.scrollMode === 'instant') {
       resetPosition();
       snapTo(update.currentWordIndex, false);
-    } else {
-      // Sync snap to confirmed transcript index
+    } else if (isForwardCatchup || isManualSeekBackward) {
       snapTo(update.currentWordIndex, smooth);
+    } else {
+      updateShadowCursor();
     }
 
     updateVisualSettings();

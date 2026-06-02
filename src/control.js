@@ -525,6 +525,53 @@ function resetPosition(clearTx = true) {
 // ═══════════════════════════════════════════════════════
 // TRANSCRIPT ACCUMULATION & ALIGNMENT
 // ═══════════════════════════════════════════════════════
+function processTranscript(chunk, isFinal) {
+  if (!chunk?.trim() || !state.paragraphs.length) return;
+  _txCount++;
+
+  // Track speech activity — used by stall nudge silence gate
+  state.lastSpeechTime = Date.now();
+
+  const acc = isFinal ? accumulateTranscript(chunk) : (state.accumulatedText ? state.accumulatedText + ' ' + chunk : chunk);
+  if (isFinal) state.recognitionBuffer = [...state.recognitionBuffer, chunk].slice(-8);
+
+  // ── Run 4 ARIA matches (all synchronous but fast) ──────────────────────
+  const m1 = ariaMatch(chunk);                                    // new chunk only
+  const m2 = state.recognitionBuffer.length >= 2
+    ? ariaMatch(state.recognitionBuffer.slice(-3).join(' '))      // recent buffer
+    : null;
+  const m3 = isFinal ? ariaMatch(acc) : null;                    // full accumulated (final only)
+  
+  const accTail = acc ? acc.split(/\s+/).slice(-12).join(' ') : null;
+  const m4 = (accTail && accTail !== chunk && accTail !== acc) ? ariaMatch(accTail) : null;
+
+  // Pick best
+  let best = null;
+  const matchers = [m1, m2, m3, m4];
+  for (const m of matchers) {
+    if (m && (!best || m.score > best.score)) { best = m; }
+  }
+
+  // ── Update beam ──
+  const hyp = updateBeam(best);
+
+  // ── Advance if beam converged ──
+  if (hyp && hyp.pos > state.currentWordIndex) {
+    const target = Math.min(hyp.pos, state.wordCount - 1);
+
+    confirmMove(target, isFinal);
+    updateParaForPos(target);
+
+    if (best?.isAnchor) recordAnchor(target);
+
+    scheduleStallNudge();
+    state.creepTargetIndex = target;
+  }
+
+  // ── Paragraph completion ──
+  if (isFinal) checkParaCompletion(acc);
+}
+
 function accumulateTranscript(chunk) {
   if (!chunk.trim()) return state.accumulatedText;
   const newWords     = chunk.trim().split(/\s+/).filter(Boolean);
@@ -682,6 +729,8 @@ function initWorkers() {
         }
       } else if (status === 'recording') {
         setStatus('recording', 'Listening...');
+        state.lastSpeechTime = Date.now();
+        syncStateToOverlay('snap');
       } else if (status === 'transcribing') {
         setStatus('loading', 'Transcribing...');
       }
@@ -697,6 +746,7 @@ function initWorkers() {
           state.sessionStartTime = Date.now();
           state.lastAdvanceTime  = Date.now();
         }
+        syncStateToOverlay('snap');
       }
     }
 
