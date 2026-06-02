@@ -899,6 +899,9 @@ async function startAudio() {
     updateButtons(true);
     scheduleStallNudge();
 
+    const waveform = document.getElementById('waveformContainer');
+    if (waveform) waveform.classList.add('active');
+
     syncStateToOverlay('snap');
   } catch (err) {
     console.error('Audio capture error:', err);
@@ -932,6 +935,9 @@ function stopAudio() {
 
   setStatus('idle', 'Stopped');
   updateButtons(false);
+
+  const waveform = document.getElementById('waveformContainer');
+  if (waveform) waveform.classList.remove('active');
 
   syncStateToOverlay('instant');
 }
@@ -1181,7 +1187,10 @@ function bindEvents() {
     renderScript();
   };
 
-  dom.scriptInput.oninput = () => renderScript();
+  dom.scriptInput.oninput = () => {
+    renderScript();
+    localStorage.setItem('teleprompter_script', dom.scriptInput.value);
+  };
 
   dom.fontSizeRange.oninput = (e) => {
     const val = parseFloat(e.target.value);
@@ -1305,14 +1314,16 @@ function bindEvents() {
   dom.launchOverlayBtn.onclick = () => {
     if (state.overlayActive) {
       window.electronAPI.controlAction('close-overlay');
-      dom.launchOverlayBtn.textContent = '✨ Launch Teleprompter Overlay';
+      dom.launchOverlayBtn.innerHTML = `<svg class="launcher-icon-play" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3"/></svg>
+      <span>Launch Teleprompter Overlay</span>`;
       dom.launchOverlayBtn.classList.remove('btn-danger');
       dom.launchOverlayBtn.classList.add('btn-primary');
       state.overlayActive = false;
     } else {
       const { paragraphs, allWords } = parseScript(dom.scriptInput.value || SAMPLE_SCRIPT);
       state.overlayActive = true;
-      dom.launchOverlayBtn.textContent = '❌ Close Teleprompter Overlay';
+      dom.launchOverlayBtn.innerHTML = `<svg class="launcher-icon-close" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      <span>Close Teleprompter Overlay</span>`;
       dom.launchOverlayBtn.classList.remove('btn-primary');
       dom.launchOverlayBtn.classList.add('btn-danger');
       
@@ -1324,10 +1335,67 @@ function bindEvents() {
     }
   };
 
+  // Sidebar tab switching
+  const tabBtnTracking = document.getElementById('tabBtnTracking');
+  const tabBtnStyles = document.getElementById('tabBtnStyles');
+  const tabPaneTracking = document.getElementById('sidebarTabTracking');
+  const tabPaneStyles = document.getElementById('sidebarTabStyles');
+
+  if (tabBtnTracking && tabBtnStyles) {
+    tabBtnTracking.onclick = () => {
+      tabBtnTracking.classList.add('active');
+      tabBtnStyles.classList.remove('active');
+      tabPaneTracking.classList.add('active');
+      tabPaneStyles.classList.remove('active');
+    };
+    tabBtnStyles.onclick = () => {
+      tabBtnStyles.classList.add('active');
+      tabBtnTracking.classList.remove('active');
+      tabPaneStyles.classList.add('active');
+      tabPaneTracking.classList.remove('active');
+    };
+  }
+
   // Pre-load model immediately on startup to avoid delays
   setTimeout(() => {
     initWorkers();
   }, 1000);
+}
+
+function isSentenceEnd(idx) {
+  if (idx < 0 || idx >= state.wordCount) return false;
+  const t = state.words[idx].text;
+  return t.endsWith('.') || t.endsWith('!') || t.endsWith('?');
+}
+
+function nudgePosition(dir) {
+  if (state.wordCount === 0) return;
+  let target = state.currentWordIndex;
+  
+  if (dir === 'up') {
+    let currentStart = target;
+    while (currentStart > 0 && !isSentenceEnd(currentStart - 1)) {
+      currentStart--;
+    }
+    if (target - currentStart <= 2 && currentStart > 0) {
+      let prevStart = currentStart - 1;
+      while (prevStart > 0 && !isSentenceEnd(prevStart - 1)) {
+        prevStart--;
+      }
+      target = prevStart;
+    } else {
+      target = currentStart;
+    }
+  } else if (dir === 'down') {
+    while (target < state.wordCount - 1 && !isSentenceEnd(target)) {
+      target++;
+    }
+    if (target < state.wordCount - 1) {
+      target++; 
+    }
+  }
+  
+  seekToWord(target);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1347,13 +1415,18 @@ function setupIpcListeners() {
           startAudio();
         }
       }
+    } else if (hotkey === 'nudge-up') {
+      nudgePosition('up');
+    } else if (hotkey === 'nudge-down') {
+      nudgePosition('down');
     }
   });
 
   // Listen for window state commands
   window.electronAPI.onControlEvent((action, data) => {
     if (action === 'overlay-closed') {
-      dom.launchOverlayBtn.textContent = '✨ Launch Teleprompter Overlay';
+      dom.launchOverlayBtn.innerHTML = `<svg class="launcher-icon-play" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3"/></svg>
+      <span>Launch Teleprompter Overlay</span>`;
       dom.launchOverlayBtn.classList.remove('btn-danger');
       dom.launchOverlayBtn.classList.add('btn-primary');
       state.overlayActive = false;
@@ -1370,7 +1443,13 @@ function setupIpcListeners() {
 // INITIALIZATION
 // ═══════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
-  dom.scriptInput.value = SAMPLE_SCRIPT;
+  const savedScript = localStorage.getItem('teleprompter_script');
+  if (savedScript !== null) {
+    dom.scriptInput.value = savedScript;
+  } else {
+    dom.scriptInput.value = SAMPLE_SCRIPT;
+  }
+  
   renderScript();
   bindEvents();
   setupIpcListeners();

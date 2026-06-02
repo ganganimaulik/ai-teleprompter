@@ -251,11 +251,24 @@ app.whenReady().then(async () => {
   setupIpcHandlers();
   createControlWindow();
 
-  // Register Global Hotkeys
   // Option+Space: Toggle play/pause
   globalShortcut.register('Option+Space', () => {
     if (controlWindow && !controlWindow.isDestroyed()) {
       controlWindow.webContents.send('hotkey-triggered', 'toggle-pause');
+    }
+  });
+
+  // Option+Up: Nudge to previous sentence
+  globalShortcut.register('Option+Up', () => {
+    if (controlWindow && !controlWindow.isDestroyed()) {
+      controlWindow.webContents.send('hotkey-triggered', 'nudge-up');
+    }
+  });
+
+  // Option+Down: Nudge to next sentence
+  globalShortcut.register('Option+Down', () => {
+    if (controlWindow && !controlWindow.isDestroyed()) {
+      controlWindow.webContents.send('hotkey-triggered', 'nudge-down');
     }
   });
 

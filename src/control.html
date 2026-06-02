@@ -8,188 +8,282 @@
 </head>
 <body>
 
-  <!-- Custom Titlebar for App Window -->
+  <!-- Custom Drag Titlebar for App Window (Frameless style) -->
   <div class="titlebar">
-    <div class="titlebar-title">AI TELEPROMPTER — CONTROL PANEL</div>
-    <div class="titlebar-controls">
-      <div class="titlebar-stats">
-        <span class="titlebar-stat">WPM: <strong id="wpmValue">—</strong></span>
-        <span class="titlebar-stat">Progress: <strong id="progressValue">0%</strong></span>
-        <span class="titlebar-stat">Time Left: <strong id="etaValue">--</strong></span>
-      </div>
-      <button id="themeToggle" class="overlay-control-btn" title="Toggle Theme">
-        <span>🌓 Theme</span>
-      </button>
+    <div class="titlebar-title">
+      <svg class="titlebar-logo" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+      AI TELEPROMPTER — CONTROL CENTER
     </div>
+    <button id="themeToggle" class="titlebar-theme-btn" title="Toggle Theme">
+      <svg class="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      <svg class="theme-icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+    </button>
   </div>
 
   <div class="app-container">
     
-    <!-- Left Column: Editor & Settings -->
+    <!-- Left Column: Stats & Editor -->
     <div class="left-column">
+      
+      <!-- Stats Dashboard -->
+      <div class="dashboard-stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1zM21 12h-8a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1zM11 22H3a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1zM21 22h-8a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1z"/></svg>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">Speaking Speed</span>
+            <div class="stat-val-container">
+              <strong class="stat-val" id="wpmValue">—</strong>
+              <span class="stat-unit">WPM</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">Remaining Time</span>
+            <div class="stat-val-container">
+              <strong class="stat-val" id="etaValue">--</strong>
+            </div>
+          </div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">Progress</span>
+            <div class="stat-val-container">
+              <strong class="stat-val" id="progressValue">0%</strong>
+            </div>
+          </div>
+        </div>
+      </div>
       
       <!-- Script Editor -->
       <div class="panel-editor glass-panel">
         <div class="panel-header">
-          <h2 class="panel-title">Your Script</h2>
+          <h2 class="panel-title">Presentation Script</h2>
           <div class="btn-group">
-            <button id="sampleScriptBtn" class="btn btn-secondary">Load Sample</button>
-            <button id="clearScriptBtn" class="btn btn-secondary">Clear</button>
+            <button id="sampleScriptBtn" class="btn btn-secondary btn-sm" title="Load Default Script">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+              <span>Load Sample</span>
+            </button>
+            <button id="clearScriptBtn" class="btn btn-secondary btn-sm" title="Clear All Text">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M10 11v6M14 11v6"/></svg>
+              <span>Clear</span>
+            </button>
           </div>
         </div>
         <textarea id="scriptInput" placeholder="Paste or type your presentation script here..."></textarea>
         
         <button id="launchOverlayBtn" class="btn btn-primary launcher-btn">
-          ✨ Launch Teleprompter Overlay
+          <svg class="launcher-icon-play" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3"/></svg>
+          <span id="launcherBtnText">Launch Teleprompter Overlay</span>
         </button>
       </div>
 
     </div>
 
-    <!-- Right Column: Speech Status & Controls -->
+    <!-- Right Column: Sidebar (Tabs Control Center) -->
     <div class="right-column">
       
-      <!-- AI Engine Status -->
-      <div class="panel-status glass-panel">
-        <div class="status-badge-row">
-          <span class="settings-label">Engine Status</span>
-          <span id="statusBadge" class="status-badge status-idle">
-            <span class="pulse-dot"></span>
-            <span id="statusText">Initializing...</span>
-          </span>
-        </div>
+      <!-- Unified Sidebar Panel -->
+      <div class="sidebar-panel glass-panel">
         
-        <!-- Progress bar for loading ONNX models -->
-        <div id="modelProgress" class="progress-bar-container">
-          <div id="modelProgressBar" class="progress-bar-fill"></div>
-        </div>
-        
-        <div id="engineIndicator" class="engine-info">Engine: Loading AI model...</div>
-      </div>
-
-      <!-- Settings panel -->
-      <div class="panel-settings glass-panel">
-        <h2 class="panel-title" style="margin-bottom: 10px;">Configurations</h2>
-        
-        <div class="settings-group">
-          <span class="settings-label">Target Speed (WPM)</span>
-          <div class="slider-container">
-            <input type="range" id="wpmRange" min="60" max="250" value="120">
-            <span id="wpmRangeVal" class="slider-val">120 WPM</span>
-          </div>
-        </div>
-
-        <div class="settings-group">
-          <span class="settings-label">Overlay Font Size</span>
-          <div class="slider-container">
-            <input type="range" id="fontSizeRange" min="1.5" max="5.0" step="0.1" value="2.8">
-            <span id="fontSizeVal" class="slider-val">2.8rem</span>
-          </div>
-        </div>
-
-        <div class="toggle-row">
-          <span class="settings-label">Mirror Mode (Horizontal)</span>
-          <label class="switch">
-            <input type="checkbox" id="mirrorToggle">
-            <span class="slider-toggle"></span>
-          </label>
-        </div>
-
-        <div class="settings-group" style="margin-top: 8px;">
-          <span class="settings-label">Speech Engine</span>
-          <select id="engineSelect" class="select-dropdown">
-            <option value="local">Local Model (Moonshine Tiny)</option>
-            <option value="modal">Modal Cloud (Whisper Large)</option>
-          </select>
-        </div>
-
-        <div id="modalUrlGroup" class="settings-group hidden" style="margin-top: 8px;">
-          <span class="settings-label">Modal Endpoint URL</span>
-          <input type="text" id="modalUrlInput" class="text-input" placeholder="https://username--teleprompter-asr-transcriber-transcribe.modal.run">
-        </div>
-
-        <!-- Overlay Visual Style customization -->
-        <h3 class="settings-label" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">Overlay Visual Style</h3>
-
-        <div class="settings-row-2col">
-          <div class="settings-group">
-            <span class="settings-label">Backdrop Style</span>
-            <select id="overlayThemeSelect" class="select-dropdown">
-              <option value="glass">Glassmorphism</option>
-              <option value="ghost">Ghost (Clear)</option>
-              <option value="glow">Pulsing Glow</option>
-              <option value="classic">Classic Dark</option>
-            </select>
-          </div>
-          <div class="settings-group">
-            <span class="settings-label">Highlight</span>
-            <select id="overlayHighlightSelect" class="select-dropdown">
-              <option value="glow">Neon Glow</option>
-              <option value="pill">Focus Pill</option>
-              <option value="underline">Underline</option>
-              <option value="minimal">Minimalist</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="settings-row-2col">
-          <div class="settings-group">
-            <span class="settings-label">Text Font</span>
-            <select id="overlayFontSelect" class="select-dropdown">
-              <option value="sans">Outfit Sans</option>
-              <option value="mono">JetBrains Mono</option>
-            </select>
-          </div>
-          <div class="settings-group">
-            <span class="settings-label">Text Align</span>
-            <select id="overlayAlignSelect" class="select-dropdown">
-              <option value="center">Center</option>
-              <option value="left">Left</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="settings-group" id="overlayOpacityGroup">
-          <span class="settings-label">Backdrop Opacity</span>
-          <div class="slider-container">
-            <input type="range" id="overlayOpacityRange" min="0" max="100" step="5" value="20">
-            <span id="overlayOpacityVal" class="slider-val">20%</span>
-          </div>
-        </div>
-
-        <div class="settings-group" id="overlayBlurGroup">
-          <span class="settings-label">Backdrop Blur</span>
-          <div class="slider-container">
-            <input type="range" id="overlayBlurRange" min="0" max="25" step="1" value="8">
-            <span id="overlayBlurVal" class="slider-val">8px</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Real-time Speech Log -->
-      <div class="panel-transcript glass-panel">
-        <span class="settings-label" style="margin-bottom: 10px;">Live ASR Transcript Logs</span>
-        <div id="transcriptBox" class="transcript-log-box">
-          <span class="transcript-placeholder">Start speaking to see your text transcribed in real-time...</span>
-        </div>
-        <div id="interimBox" class="interim-text" style="margin-top: 6px; font-size: 13px;"></div>
-        
-        <div class="btn-group" style="margin-top: 14px;">
-          <button id="startBtn" class="btn btn-primary" style="flex: 1;" disabled>
-            🎙️ Start Tracking
+        <!-- Sidebar Navigation Tabs -->
+        <div class="sidebar-tabs">
+          <button id="tabBtnTracking" class="tab-btn active" data-target="sidebarTabTracking">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 19v4M8 23h8"/></svg>
+            <span>Tracking & AI</span>
           </button>
-          <button id="stopBtn" class="btn btn-danger" style="flex: 1;" disabled>
-            ⏹️ Stop
+          <button id="tabBtnStyles" class="tab-btn" data-target="sidebarTabStyles">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24M14.83 9.17l4.24-4.24M14.83 14.83l4.24 4.24M9.17 14.83l-4.24 4.24"/></svg>
+            <span>Overlay Visuals</span>
           </button>
         </div>
-        <div class="btn-group" style="margin-top: 10px;">
-          <button id="resetBtn" class="btn btn-secondary" style="flex: 1;">
-            🔄 Reset Prompt Position
-          </button>
+
+        <div class="sidebar-tab-content">
+          
+          <!-- TAB 1: ASR & Tracking -->
+          <div id="sidebarTabTracking" class="tab-pane active">
+            
+            <!-- AI Engine Status Badge -->
+            <div class="engine-status-block">
+              <div class="status-badge-row">
+                <span class="settings-label">Engine Status</span>
+                <span id="statusBadge" class="status-badge status-idle">
+                  <span class="pulse-dot"></span>
+                  <span id="statusText">Initializing...</span>
+                </span>
+              </div>
+              
+              <!-- Progress bar for loading ONNX models -->
+              <div id="modelProgress" class="progress-bar-container">
+                <div id="modelProgressBar" class="progress-bar-fill"></div>
+              </div>
+              
+              <div id="engineIndicator" class="engine-info">Engine: Loading AI model...</div>
+            </div>
+
+            <!-- Voice Activity Waveform -->
+            <div class="voice-activity-panel">
+              <span class="settings-label">Voice Activity Indicator</span>
+              <div class="voice-waveform-container" id="waveformContainer">
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+              </div>
+            </div>
+
+            <!-- Transcript Logs -->
+            <div class="transcript-logs-panel">
+              <span class="settings-label">ASR Real-Time Transcript</span>
+              <div id="transcriptBox" class="transcript-log-box">
+                <span class="transcript-placeholder">Start speaking to see your text transcribed in real-time...</span>
+              </div>
+              <div id="interimBox" class="interim-text"></div>
+            </div>
+
+            <!-- Tracking Controls Trigger Buttons -->
+            <div class="tracking-action-group">
+              <div class="btn-group">
+                <button id="startBtn" class="btn btn-primary" style="flex: 1;" disabled>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 19v4M8 23h8"/></svg>
+                  <span>Start Track</span>
+                </button>
+                <button id="stopBtn" class="btn btn-danger" style="flex: 1;" disabled>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+                  <span>Stop</span>
+                </button>
+              </div>
+              <button id="resetBtn" class="btn btn-secondary" style="width: 100%; margin-top: 8px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16M3 21v-5h5"/></svg>
+                <span>Reset Position</span>
+              </button>
+            </div>
+
+            <!-- Speech engine configuration selectors -->
+            <div class="speech-engine-settings">
+              <div class="settings-group">
+                <span class="settings-label">Speech Engine</span>
+                <select id="engineSelect" class="select-dropdown">
+                  <option value="local">Local Model (Moonshine Tiny)</option>
+                  <option value="modal">Modal Cloud (Whisper Large)</option>
+                </select>
+              </div>
+              
+              <div id="modalUrlGroup" class="settings-group hidden" style="margin-top: 10px;">
+                <span class="settings-label">Modal Endpoint URL</span>
+                <input type="text" id="modalUrlInput" class="text-input" placeholder="https://username--teleprompter-asr-transcriber-transcribe.modal.run">
+              </div>
+            </div>
+
+          </div>
+
+          <!-- TAB 2: Overlay Configurations -->
+          <div id="sidebarTabStyles" class="tab-pane">
+            
+            <div class="styles-pane-scroller">
+              
+              <div class="settings-group">
+                <span class="settings-label">Target Speed (WPM)</span>
+                <div class="slider-container">
+                  <input type="range" id="wpmRange" min="60" max="250" value="120">
+                  <span id="wpmRangeVal" class="slider-val">120 WPM</span>
+                </div>
+              </div>
+
+              <div class="settings-group">
+                <span class="settings-label">Overlay Font Size</span>
+                <div class="slider-container">
+                  <input type="range" id="fontSizeRange" min="1.5" max="5.0" step="0.1" value="2.8">
+                  <span id="fontSizeVal" class="slider-val">2.8rem</span>
+                </div>
+              </div>
+
+              <div class="toggle-row">
+                <span class="settings-label">Mirror Mode (Horizontal)</span>
+                <label class="switch">
+                  <input type="checkbox" id="mirrorToggle">
+                  <span class="slider-toggle"></span>
+                </label>
+              </div>
+
+              <!-- Visual presets divider -->
+              <div class="styles-divider">Overlay Appearance</div>
+
+              <div class="settings-row-2col">
+                <div class="settings-group">
+                  <span class="settings-label">Backdrop Style</span>
+                  <select id="overlayThemeSelect" class="select-dropdown">
+                    <option value="glass">Glassmorphism</option>
+                    <option value="ghost">Ghost (Clear)</option>
+                    <option value="glow">Pulsing Glow</option>
+                    <option value="classic">Classic Dark</option>
+                  </select>
+                </div>
+                <div class="settings-group">
+                  <span class="settings-label">Highlight Focus</span>
+                  <select id="overlayHighlightSelect" class="select-dropdown">
+                    <option value="glow">Neon Glow</option>
+                    <option value="pill">Focus Pill</option>
+                    <option value="underline">Underline</option>
+                    <option value="minimal">Minimalist</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="settings-row-2col">
+                <div class="settings-group">
+                  <span class="settings-label">Text Font</span>
+                  <select id="overlayFontSelect" class="select-dropdown">
+                    <option value="sans">Outfit Sans</option>
+                    <option value="mono">JetBrains Mono</option>
+                  </select>
+                </div>
+                <div class="settings-group">
+                  <span class="settings-label">Text Align</span>
+                  <select id="overlayAlignSelect" class="select-dropdown">
+                    <option value="center">Center</option>
+                    <option value="left">Left</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="settings-group" id="overlayOpacityGroup">
+                <span class="settings-label">Backdrop Opacity</span>
+                <div class="slider-container">
+                  <input type="range" id="overlayOpacityRange" min="0" max="100" step="5" value="20">
+                  <span id="overlayOpacityVal" class="slider-val">20%</span>
+                </div>
+              </div>
+
+              <div class="settings-group" id="overlayBlurGroup">
+                <span class="settings-label">Backdrop Blur</span>
+                <div class="slider-container">
+                  <input type="range" id="overlayBlurRange" min="0" max="25" step="1" value="8">
+                  <span id="overlayBlurVal" class="slider-val">8px</span>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
         </div>
+
       </div>
-
-
 
     </div>
 

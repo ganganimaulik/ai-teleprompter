@@ -55,7 +55,6 @@ const dom = {
   teleprompterContent:$('teleprompterContent'),
   highlightPill:     $('highlightPill'),
   overlayPlayBtn:    $('overlayPlayBtn'),
-  overlayResetBtn:   $('overlayResetBtn'),
   overlayCloseBtn:   $('overlayCloseBtn')
 };
 
@@ -489,9 +488,6 @@ function bindButtons() {
     window.electronAPI.controlAction('toggle-pause');
   };
 
-  dom.overlayResetBtn.onclick = () => {
-    window.electronAPI.controlAction('reset-position');
-  };
 
   dom.overlayCloseBtn.onclick = () => {
     window.electronAPI.controlAction('close-overlay');
