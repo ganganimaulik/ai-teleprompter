@@ -655,7 +655,7 @@ input:checked + .slider-toggle:before {
 }
 
 .teleprompter-paragraph {
-  margin-bottom: 1em;
+  margin-bottom: 0.5em;
 }
 
 .teleprompter-paragraph:last-child {
