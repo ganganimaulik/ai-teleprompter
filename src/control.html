@@ -89,6 +89,19 @@
             <span class="slider-toggle"></span>
           </label>
         </div>
+
+        <div class="settings-group" style="margin-top: 8px;">
+          <span class="settings-label">Speech Engine</span>
+          <select id="engineSelect" class="select-dropdown">
+            <option value="local">Local Model (Moonshine Tiny)</option>
+            <option value="modal">Modal Cloud (Whisper Large)</option>
+          </select>
+        </div>
+
+        <div id="modalUrlGroup" class="settings-group hidden" style="margin-top: 8px;">
+          <span class="settings-label">Modal Endpoint URL</span>
+          <input type="text" id="modalUrlInput" class="text-input" placeholder="https://username--teleprompter-asr-transcriber-transcribe.modal.run">
+        </div>
       </div>
 
       <!-- Real-time Speech Log -->

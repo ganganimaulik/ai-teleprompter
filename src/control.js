@@ -66,7 +66,9 @@ const state = {
     fontSize: 2.8, 
     mirror: false,
     wpm: 130,
-    theme: 'dark'
+    theme: 'dark',
+    engine: 'local',
+    modalUrl: ''
   },
   
   vadWorker: null,    
@@ -720,7 +722,13 @@ function initWorkers() {
         state.modelLoading = false; 
         state.modelReady = true;
         if (dom.modelProgress) dom.modelProgress.classList.remove('active');
-        if (dom.engineIndicator) dom.engineIndicator.textContent = 'Engine: Moonshine AI (Active)';
+        if (dom.engineIndicator) {
+          if (state.settings.engine === 'modal') {
+            dom.engineIndicator.textContent = 'Engine: Modal Cloud (Whisper Active)';
+          } else {
+            dom.engineIndicator.textContent = 'Engine: Moonshine AI (Active)';
+          }
+        }
         
         dom.startBtn.removeAttribute('disabled');
         if (state._startPending) { 
@@ -759,7 +767,11 @@ function initWorkers() {
     if (type === 'info') {
       console.log('[ASR Workers]', message);
       if (dom.engineIndicator && message.includes('Device:')) {
-        dom.engineIndicator.textContent = `Engine: Moonshine AI (${message.includes('webgpu') ? 'WebGPU' : 'WASM'})`;
+        if (state.settings.engine === 'modal') {
+          dom.engineIndicator.textContent = 'Engine: Modal Cloud (Whisper Active)';
+        } else {
+          dom.engineIndicator.textContent = `Engine: Moonshine AI (${message.includes('webgpu') ? 'WebGPU' : 'WASM'})`;
+        }
       }
     }
 
@@ -790,6 +802,13 @@ function initWorkers() {
   state.txWorker = new Worker('./transcribe.worker.js', { type: 'module' });
   state.txWorker.onmessage = handleMessage;
   state.txWorker.onerror   = handleError;
+
+  // Post initial configuration to worker
+  state.txWorker.postMessage({
+    type: 'configure',
+    engine: state.settings.engine,
+    modalUrl: state.settings.modalUrl
+  });
 }
 
 // ═══════════════════════════════════════════════════════
@@ -930,7 +949,10 @@ const dom = {
   launchOverlayBtn: $('launchOverlayBtn'),
   transcriptBox:    $('transcriptBox'),
   interimBox:       $('interimBox'),
-  themeToggle:      $('themeToggle')
+  themeToggle:      $('themeToggle'),
+  engineSelect:     $('engineSelect'),
+  modalUrlInput:    $('modalUrlInput'),
+  modalUrlGroup:    $('modalUrlGroup')
 };
 
 function setStatus(type, text) {
@@ -999,6 +1021,63 @@ function updateProgress() {
   }
 }
 
+function loadPersistedSettings() {
+  const saved = localStorage.getItem('teleprompter_settings');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      state.settings = { ...state.settings, ...parsed };
+    } catch (e) {
+      console.error('Failed to parse saved settings:', e);
+    }
+  }
+  
+  // Apply settings to UI
+  if (dom.wpmRange) {
+    dom.wpmRange.value = state.settings.wpm;
+    dom.wpmRangeVal.textContent = `${state.settings.wpm} WPM`;
+  }
+  if (dom.fontSizeRange) {
+    dom.fontSizeRange.value = state.settings.fontSize;
+    dom.fontSizeVal.textContent = `${state.settings.fontSize.toFixed(1)}rem`;
+  }
+  if (dom.mirrorToggle) {
+    dom.mirrorToggle.checked = state.settings.mirror;
+  }
+  if (state.settings.theme === 'light') {
+    document.body.classList.add('light-theme');
+  } else {
+    document.body.classList.remove('light-theme');
+  }
+  if (dom.engineSelect) {
+    dom.engineSelect.value = state.settings.engine;
+  }
+  if (dom.modalUrlInput) {
+    let url = state.settings.modalUrl || '';
+    if (url.includes('transcribe.modal.run')) {
+      url = url.replace('transcribe.modal.run', 'fastapi-app.modal.run');
+      state.settings.modalUrl = url;
+      savePersistedSettings();
+    }
+    dom.modalUrlInput.value = url;
+  }
+  
+  toggleModalUrlVisibility();
+}
+
+function savePersistedSettings() {
+  localStorage.setItem('teleprompter_settings', JSON.stringify(state.settings));
+}
+
+function toggleModalUrlVisibility() {
+  if (!dom.modalUrlGroup) return;
+  if (state.settings.engine === 'modal') {
+    dom.modalUrlGroup.classList.remove('hidden');
+  } else {
+    dom.modalUrlGroup.classList.add('hidden');
+  }
+}
+
 // Bind interactive event listeners
 function bindEvents() {
   dom.startBtn.onclick = () => {
@@ -1031,6 +1110,7 @@ function bindEvents() {
     dom.fontSizeVal.textContent = `${val.toFixed(1)}rem`;
     state.settings.fontSize = val;
     syncStateToOverlay('instant');
+    savePersistedSettings();
   };
 
   dom.wpmRange.oninput = (e) => {
@@ -1038,11 +1118,13 @@ function bindEvents() {
     dom.wpmRangeVal.textContent = `${val} WPM`;
     state.settings.wpm = val;
     syncStateToOverlay('instant');
+    savePersistedSettings();
   };
 
   dom.mirrorToggle.onchange = (e) => {
     state.settings.mirror = e.target.checked;
     syncStateToOverlay('instant');
+    savePersistedSettings();
   };
 
   dom.themeToggle.onclick = () => {
@@ -1054,6 +1136,50 @@ function bindEvents() {
       state.settings.theme = 'light';
     }
     syncStateToOverlay('instant');
+    savePersistedSettings();
+  };
+
+  dom.engineSelect.onchange = (e) => {
+    state.settings.engine = e.target.value;
+    toggleModalUrlVisibility();
+    savePersistedSettings();
+    
+    // Adjust readiness state dynamically
+    if (state.settings.engine === 'local') {
+      state.modelReady = false;
+      setStatus('loading', 'Loading Speech model...');
+      if (dom.engineIndicator) dom.engineIndicator.textContent = 'Engine: Moonshine AI (Loading...)';
+      if (dom.modelProgress) dom.modelProgress.classList.add('active');
+    } else {
+      // Modal engine is always ready immediately
+      state.modelReady = true;
+      setStatus('idle', 'Speech Model Ready');
+      if (dom.engineIndicator) dom.engineIndicator.textContent = 'Engine: Modal Cloud (Whisper Active)';
+      if (dom.modelProgress) dom.modelProgress.classList.remove('active');
+    }
+
+    // Reconfigure the worker
+    if (state.txWorker) {
+      state.txWorker.postMessage({
+        type: 'configure',
+        engine: state.settings.engine,
+        modalUrl: state.settings.modalUrl
+      });
+    }
+  };
+
+  dom.modalUrlInput.oninput = (e) => {
+    state.settings.modalUrl = e.target.value.trim();
+    savePersistedSettings();
+    
+    // Update worker config
+    if (state.txWorker) {
+      state.txWorker.postMessage({
+        type: 'configure',
+        engine: state.settings.engine,
+        modalUrl: state.settings.modalUrl
+      });
+    }
   };
 
   // Launch transparent overlay window via IPC
@@ -1129,4 +1255,5 @@ window.addEventListener('DOMContentLoaded', () => {
   renderScript();
   bindEvents();
   setupIpcListeners();
+  loadPersistedSettings();
 });
