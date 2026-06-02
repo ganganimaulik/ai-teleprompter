@@ -6,13 +6,13 @@ const SAMPLE_SCRIPT = `Welcome to this AI-powered desktop teleprompter.
 
 As you speak, the script will automatically scroll to keep up with your words. Each word you say is highlighted in real time, so you always know exactly where you are in your presentation.
 
-This teleprompter uses an embedded AI voice model that runs entirely on your device. No data leaves your machine, and no internet connection is required after the first load.
+This teleprompter supports two powerful speech recognition engines. By default, it uses a local Moonshine AI model running entirely in your browser with WebGPU or WebAssembly. For even higher accuracy, you can switch to the Modal Cloud engine using Distil-Whisper.
 
-To get started, click Start Tracking. The microphone will listen to your voice and track your progress through the script automatically.
+To get started, make sure your microphone is connected and click Start Tracking. The AI will listen to your voice and guide the scrolling automatically.
 
-You can adjust the font size and speaking rate using the controls. Mirror mode flips the display horizontally for physical teleprompter glass rigs.
+You can adjust the font size, target speaking rate, and visual themes using the controls. If you are using physical teleprompter glass, enable Mirror Mode to flip the display.
 
-Thank you for using this app. Good luck with your speech!`;
+Thank you for using this app. Good luck with your presentation!`;
 
 const ASR_OVERRIDES = {
   'a':   'hw_art', 'the': 'hw_art',
@@ -65,10 +65,16 @@ const state = {
   settings: { 
     fontSize: 2.8, 
     mirror: false,
-    wpm: 130,
+    wpm: 120,
     theme: 'dark',
     engine: 'local',
-    modalUrl: ''
+    modalUrl: '',
+    overlayTheme: 'glass',
+    overlayHighlight: 'glow',
+    overlayFont: 'sans',
+    overlayAlign: 'center',
+    overlayOpacity: 20,
+    overlayBlur: 8
   },
   
   vadWorker: null,    
@@ -95,7 +101,7 @@ const CFG = {
   BEAM_SIZE:               3,
   STALL_MS:                11000, 
   NUDGE_INTERVAL_MS:       7000,
-  WPM_DEFAULT:             130,   
+  WPM_DEFAULT:             120,   
   PARA_COMPLETE_RATIO:     0.55,  
   PARA_COMPLETE_DELAY:     500,
   CREEP_SILENCE_PAUSE_MS:  1000,  
@@ -698,6 +704,14 @@ function syncStateToOverlay(scrollMode = 'snap') {
     fontSize: state.settings.fontSize,
     mirror: state.settings.mirror,
     
+    // Visual styles
+    overlayTheme: state.settings.overlayTheme,
+    overlayHighlight: state.settings.overlayHighlight,
+    overlayFont: state.settings.overlayFont,
+    overlayAlign: state.settings.overlayAlign,
+    overlayOpacity: state.settings.overlayOpacity,
+    overlayBlur: state.settings.overlayBlur,
+    
     // Commands
     scrollMode: scrollMode
   });
@@ -952,7 +966,19 @@ const dom = {
   themeToggle:      $('themeToggle'),
   engineSelect:     $('engineSelect'),
   modalUrlInput:    $('modalUrlInput'),
-  modalUrlGroup:    $('modalUrlGroup')
+  modalUrlGroup:    $('modalUrlGroup'),
+  
+  // Visual Configuration elements
+  overlayThemeSelect:     $('overlayThemeSelect'),
+  overlayHighlightSelect: $('overlayHighlightSelect'),
+  overlayFontSelect:      $('overlayFontSelect'),
+  overlayAlignSelect:     $('overlayAlignSelect'),
+  overlayOpacityRange:    $('overlayOpacityRange'),
+  overlayOpacityVal:      $('overlayOpacityVal'),
+  overlayOpacityGroup:    $('overlayOpacityGroup'),
+  overlayBlurRange:       $('overlayBlurRange'),
+  overlayBlurVal:         $('overlayBlurVal'),
+  overlayBlurGroup:       $('overlayBlurGroup')
 };
 
 function setStatus(type, text) {
@@ -1062,7 +1088,47 @@ function loadPersistedSettings() {
     dom.modalUrlInput.value = url;
   }
   
+  // Apply visual configurations to UI
+  if (dom.overlayThemeSelect) {
+    dom.overlayThemeSelect.value = state.settings.overlayTheme || 'glass';
+  }
+  if (dom.overlayHighlightSelect) {
+    dom.overlayHighlightSelect.value = state.settings.overlayHighlight || 'glow';
+  }
+  if (dom.overlayFontSelect) {
+    dom.overlayFontSelect.value = state.settings.overlayFont || 'sans';
+  }
+  if (dom.overlayAlignSelect) {
+    dom.overlayAlignSelect.value = state.settings.overlayAlign || 'center';
+  }
+  if (dom.overlayOpacityRange) {
+    const opacity = state.settings.overlayOpacity !== undefined ? state.settings.overlayOpacity : 20;
+    dom.overlayOpacityRange.value = opacity;
+    dom.overlayOpacityVal.textContent = `${opacity}%`;
+  }
+  if (dom.overlayBlurRange) {
+    const blur = state.settings.overlayBlur !== undefined ? state.settings.overlayBlur : 8;
+    dom.overlayBlurRange.value = blur;
+    dom.overlayBlurVal.textContent = `${blur}px`;
+  }
+  
   toggleModalUrlVisibility();
+  toggleOpacityBlurControls();
+
+  // Initialize status state based on engine on startup
+  if (state.settings.engine === 'modal') {
+    state.modelReady = true;
+    setStatus('idle', 'Speech Model Ready');
+    if (dom.engineIndicator) dom.engineIndicator.textContent = 'Engine: Modal Cloud (Whisper Active)';
+    if (dom.modelProgress) dom.modelProgress.classList.remove('active');
+    if (dom.startBtn) dom.startBtn.removeAttribute('disabled');
+  } else {
+    state.modelReady = false;
+    setStatus('loading', 'Loading Speech model...');
+    if (dom.engineIndicator) dom.engineIndicator.textContent = 'Engine: Moonshine AI (Loading...)';
+    if (dom.modelProgress) dom.modelProgress.classList.add('active');
+    if (dom.startBtn) dom.startBtn.setAttribute('disabled', 'true');
+  }
 }
 
 function savePersistedSettings() {
@@ -1075,6 +1141,18 @@ function toggleModalUrlVisibility() {
     dom.modalUrlGroup.classList.remove('hidden');
   } else {
     dom.modalUrlGroup.classList.add('hidden');
+  }
+}
+
+function toggleOpacityBlurControls() {
+  if (!dom.overlayOpacityGroup || !dom.overlayBlurGroup) return;
+  const isGhost = (state.settings.overlayTheme === 'ghost');
+  if (isGhost) {
+    dom.overlayOpacityGroup.classList.add('hidden');
+    dom.overlayBlurGroup.classList.add('hidden');
+  } else {
+    dom.overlayOpacityGroup.classList.remove('hidden');
+    dom.overlayBlurGroup.classList.remove('hidden');
   }
 }
 
@@ -1123,6 +1201,47 @@ function bindEvents() {
 
   dom.mirrorToggle.onchange = (e) => {
     state.settings.mirror = e.target.checked;
+    syncStateToOverlay('instant');
+    savePersistedSettings();
+  };
+
+  dom.overlayThemeSelect.onchange = (e) => {
+    state.settings.overlayTheme = e.target.value;
+    toggleOpacityBlurControls();
+    syncStateToOverlay('instant');
+    savePersistedSettings();
+  };
+
+  dom.overlayHighlightSelect.onchange = (e) => {
+    state.settings.overlayHighlight = e.target.value;
+    syncStateToOverlay('instant');
+    savePersistedSettings();
+  };
+
+  dom.overlayFontSelect.onchange = (e) => {
+    state.settings.overlayFont = e.target.value;
+    syncStateToOverlay('instant');
+    savePersistedSettings();
+  };
+
+  dom.overlayAlignSelect.onchange = (e) => {
+    state.settings.overlayAlign = e.target.value;
+    syncStateToOverlay('instant');
+    savePersistedSettings();
+  };
+
+  dom.overlayOpacityRange.oninput = (e) => {
+    const val = parseInt(e.target.value);
+    dom.overlayOpacityVal.textContent = `${val}%`;
+    state.settings.overlayOpacity = val;
+    syncStateToOverlay('instant');
+    savePersistedSettings();
+  };
+
+  dom.overlayBlurRange.oninput = (e) => {
+    const val = parseInt(e.target.value);
+    dom.overlayBlurVal.textContent = `${val}px`;
+    state.settings.overlayBlur = val;
     syncStateToOverlay('instant');
     savePersistedSettings();
   };

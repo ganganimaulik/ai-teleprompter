@@ -12,6 +12,11 @@
   <div class="titlebar">
     <div class="titlebar-title">AI TELEPROMPTER — CONTROL PANEL</div>
     <div class="titlebar-controls">
+      <div class="titlebar-stats">
+        <span class="titlebar-stat">WPM: <strong id="wpmValue">—</strong></span>
+        <span class="titlebar-stat">Progress: <strong id="progressValue">0%</strong></span>
+        <span class="titlebar-stat">Time Left: <strong id="etaValue">--</strong></span>
+      </div>
       <button id="themeToggle" class="overlay-control-btn" title="Toggle Theme">
         <span>🌓 Theme</span>
       </button>
@@ -69,8 +74,8 @@
         <div class="settings-group">
           <span class="settings-label">Target Speed (WPM)</span>
           <div class="slider-container">
-            <input type="range" id="wpmRange" min="60" max="250" value="130">
-            <span id="wpmRangeVal" class="slider-val">130 WPM</span>
+            <input type="range" id="wpmRange" min="60" max="250" value="120">
+            <span id="wpmRangeVal" class="slider-val">120 WPM</span>
           </div>
         </div>
 
@@ -102,6 +107,63 @@
           <span class="settings-label">Modal Endpoint URL</span>
           <input type="text" id="modalUrlInput" class="text-input" placeholder="https://username--teleprompter-asr-transcriber-transcribe.modal.run">
         </div>
+
+        <!-- Overlay Visual Style customization -->
+        <h3 class="settings-label" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">Overlay Visual Style</h3>
+
+        <div class="settings-row-2col">
+          <div class="settings-group">
+            <span class="settings-label">Backdrop Style</span>
+            <select id="overlayThemeSelect" class="select-dropdown">
+              <option value="glass">Glassmorphism</option>
+              <option value="ghost">Ghost (Clear)</option>
+              <option value="glow">Pulsing Glow</option>
+              <option value="classic">Classic Dark</option>
+            </select>
+          </div>
+          <div class="settings-group">
+            <span class="settings-label">Highlight</span>
+            <select id="overlayHighlightSelect" class="select-dropdown">
+              <option value="glow">Neon Glow</option>
+              <option value="pill">Focus Pill</option>
+              <option value="underline">Underline</option>
+              <option value="minimal">Minimalist</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="settings-row-2col">
+          <div class="settings-group">
+            <span class="settings-label">Text Font</span>
+            <select id="overlayFontSelect" class="select-dropdown">
+              <option value="sans">Outfit Sans</option>
+              <option value="mono">JetBrains Mono</option>
+            </select>
+          </div>
+          <div class="settings-group">
+            <span class="settings-label">Text Align</span>
+            <select id="overlayAlignSelect" class="select-dropdown">
+              <option value="center">Center</option>
+              <option value="left">Left</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="settings-group" id="overlayOpacityGroup">
+          <span class="settings-label">Backdrop Opacity</span>
+          <div class="slider-container">
+            <input type="range" id="overlayOpacityRange" min="0" max="100" step="5" value="20">
+            <span id="overlayOpacityVal" class="slider-val">20%</span>
+          </div>
+        </div>
+
+        <div class="settings-group" id="overlayBlurGroup">
+          <span class="settings-label">Backdrop Blur</span>
+          <div class="slider-container">
+            <input type="range" id="overlayBlurRange" min="0" max="25" step="1" value="8">
+            <span id="overlayBlurVal" class="slider-val">8px</span>
+          </div>
+        </div>
       </div>
 
       <!-- Real-time Speech Log -->
@@ -127,24 +189,7 @@
         </div>
       </div>
 
-      <!-- Presentation Stats -->
-      <div class="panel-stats glass-panel">
-        <h2 class="panel-title" style="margin-bottom: 10px;">Performance stats</h2>
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div id="wpmValue" class="stat-num">0</div>
-            <div class="stat-label">Speaking WPM</div>
-          </div>
-          <div class="stat-card">
-            <div id="progressValue" class="stat-num">0%</div>
-            <div class="stat-label">Progress</div>
-          </div>
-        </div>
-        <div class="stat-card" style="margin-top: 4px;">
-          <div id="etaValue" class="stat-num">--</div>
-          <div class="stat-label">Estimated Remaining Time</div>
-        </div>
-      </div>
+
 
     </div>
 

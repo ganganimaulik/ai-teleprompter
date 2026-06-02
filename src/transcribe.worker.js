@@ -1,6 +1,4 @@
-import {
-  pipeline,
-} from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/dist/transformers.min.js';
+let pipelineFn = null;
 
 async function supportsWebGPU() {
   if (!('gpu' in navigator)) return false;
@@ -34,7 +32,11 @@ async function ensureLocalTranscriber() {
   self.postMessage({ type: 'status', status: 'loading', message: 'Loading local model…' });
   
   try {
-    transcriber = await pipeline(
+    if (!pipelineFn) {
+      const transformers = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/dist/transformers.min.js');
+      pipelineFn = transformers.pipeline;
+    }
+    transcriber = await pipelineFn(
       'automatic-speech-recognition',
       'onnx-community/moonshine-tiny-ONNX',
       {

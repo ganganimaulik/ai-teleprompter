@@ -166,21 +166,21 @@ body {
 
 /* Control Settings Panel */
 .panel-settings {
-  padding: 20px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
   overflow-y: auto;
 }
 
 .settings-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .settings-label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   text-transform: uppercase;
   color: var(--text-secondary);
@@ -198,8 +198,8 @@ body {
   flex: 1;
   -webkit-appearance: none;
   appearance: none;
-  height: 6px;
-  border-radius: 3px;
+  height: 8px;
+  border-radius: 4px;
   background: rgba(255, 255, 255, 0.1);
   outline: none;
   cursor: pointer;
@@ -208,8 +208,8 @@ body {
 .slider-container input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: var(--accent-color);
   box-shadow: var(--glow-shadow);
@@ -222,8 +222,8 @@ body {
 
 .slider-val {
   font-family: var(--font-mono);
-  font-size: 14px;
-  min-width: 45px;
+  font-size: 15px;
+  min-width: 50px;
   text-align: right;
 }
 
@@ -237,8 +237,8 @@ body {
 .switch {
   position: relative;
   display: inline-block;
-  width: 44px;
-  height: 24px;
+  width: 48px;
+  height: 26px;
   -webkit-app-region: no-drag;
 }
 
@@ -257,15 +257,15 @@ body {
   bottom: 0;
   background-color: rgba(255, 255, 255, 0.1);
   transition: .3s;
-  border-radius: 24px;
+  border-radius: 26px;
   border: 1px solid var(--border-color);
 }
 
 .slider-toggle:before {
   position: absolute;
   content: "";
-  height: 16px;
-  width: 16px;
+  height: 18px;
+  width: 18px;
   left: 3px;
   bottom: 3px;
   background-color: var(--text-primary);
@@ -278,7 +278,7 @@ input:checked + .slider-toggle {
 }
 
 input:checked + .slider-toggle:before {
-  transform: translateX(20px);
+  transform: translateX(24px);
 }
 
 /* AI Model Download Status Panel */
@@ -398,39 +398,32 @@ input:checked + .slider-toggle:before {
 }
 
 /* Stats visualizer (ETA, WPM, progress) */
-.panel-stats {
-  padding: 20px;
+/* Stats visualizer inside the titlebar */
+.titlebar-stats {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 12px;
+  margin-right: 8px;
+  -webkit-app-region: no-drag;
 }
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.stat-card {
-  background: rgba(255, 255, 255, 0.02);
+.titlebar-stat {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border-color);
-  border-radius: 10px;
-  padding: 12px;
-  text-align: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.stat-num {
-  font-family: var(--font-mono);
-  font-size: 20px;
-  font-weight: 600;
+.titlebar-stat strong {
   color: var(--text-primary);
-}
-
-.stat-label {
-  font-size: 10px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  margin-top: 4px;
+  font-weight: 600;
+  font-family: var(--font-mono);
 }
 
 /* Action buttons */
@@ -520,7 +513,7 @@ input:checked + .slider-toggle:before {
   border-radius: 0;
 }
 
-/* Transparent Overlay Container */
+/* Transparent Overlay Container presets */
 .teleprompter-overlay-container {
   height: 100vh;
   width: 100vw;
@@ -532,14 +525,80 @@ input:checked + .slider-toggle:before {
   overflow: hidden;
   border: none;
   border-radius: 16px;
-  background: rgba(11, 12, 16, 0.15); /* highly transparent to see background apps perfectly */
-  backdrop-filter: none; /* remove blur completely so background content remains sharp and readable */
-  transition: border-color 0.3s ease, background 0.3s ease;
+  background: rgba(11, 12, 16, var(--overlay-bg-opacity, 0.15));
+  backdrop-filter: blur(var(--overlay-blur, 0px));
+  -webkit-backdrop-filter: blur(var(--overlay-blur, 0px));
+  transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease, backdrop-filter 0.3s ease;
 }
 
-/* Highlight background when overlay is active (no borders) */
-.teleprompter-overlay-container.listening {
-  background: rgba(11, 12, 16, 0.28); /* subtle dark tint during tracking for minimum text contrast */
+/* Glassmorphism theme */
+.teleprompter-overlay-container.theme-glass {
+  background: rgba(11, 12, 16, var(--overlay-bg-opacity, 0.20));
+  backdrop-filter: blur(var(--overlay-blur, 8px));
+  -webkit-backdrop-filter: blur(var(--overlay-blur, 8px));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+.teleprompter-overlay-container.theme-glass.listening {
+  background: rgba(11, 12, 16, calc(var(--overlay-bg-opacity, 0.20) + 0.1));
+}
+
+/* Transparent Ghost theme */
+.teleprompter-overlay-container.theme-ghost {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+/* Enhanced high contrast text for ghost mode to be legible on code editor backgrounds */
+.teleprompter-overlay-container.theme-ghost .word {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 1), 0 2px 5px rgba(0, 0, 0, 1), 0 0 1px rgba(0,0,0,1);
+}
+.teleprompter-overlay-container.theme-ghost .word.current {
+  text-shadow: 0 0 12px rgba(0, 206, 201, 1), 0 1px 4px rgba(0, 0, 0, 1), 0 2px 8px rgba(0, 0, 0, 1);
+}
+.teleprompter-overlay-container.theme-ghost .word.creep {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 1), 0 2px 5px rgba(0, 0, 0, 1);
+}
+
+/* Pulsing Glow theme */
+.teleprompter-overlay-container.theme-glow {
+  background: rgba(11, 12, 16, var(--overlay-bg-opacity, 0.25));
+  backdrop-filter: blur(var(--overlay-blur, 0px));
+  -webkit-backdrop-filter: blur(var(--overlay-blur, 0px));
+  border: 1.5px solid rgba(0, 206, 201, 0.55);
+  box-shadow: 0 0 15px rgba(0, 206, 201, 0.25);
+  animation: border-glow-pulse 4s infinite alternate;
+}
+@keyframes border-glow-pulse {
+  0% {
+    border-color: rgba(0, 206, 201, 0.55);
+    box-shadow: 0 0 15px rgba(0, 206, 201, 0.25);
+  }
+  50% {
+    border-color: rgba(108, 92, 231, 0.55);
+    box-shadow: 0 0 20px rgba(108, 92, 231, 0.35);
+  }
+  100% {
+    border-color: rgba(0, 206, 201, 0.55);
+    box-shadow: 0 0 15px rgba(0, 206, 201, 0.25);
+  }
+}
+.teleprompter-overlay-container.theme-glow.listening {
+  background: rgba(11, 12, 16, calc(var(--overlay-bg-opacity, 0.25) + 0.1));
+}
+
+/* Classic Dark theme */
+.teleprompter-overlay-container.theme-classic {
+  background: rgba(11, 12, 16, var(--overlay-bg-opacity, 0.5));
+  backdrop-filter: blur(var(--overlay-blur, 0px));
+  -webkit-backdrop-filter: blur(var(--overlay-blur, 0px));
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+.teleprompter-overlay-container.theme-classic.listening {
+  background: rgba(11, 12, 16, calc(var(--overlay-bg-opacity, 0.5) + 0.12));
 }
 
 /* Scrolling Text Wrapper */
@@ -571,11 +630,36 @@ input:checked + .slider-toggle:before {
 
 .teleprompter-text-content {
   position: relative;
-  text-align: center;
-  font-family: var(--font-sans);
   font-weight: 500;
   line-height: 1.5;
   will-change: transform;
+}
+
+/* Typography styles */
+.teleprompter-text-content.font-sans {
+  font-family: var(--font-sans);
+}
+.teleprompter-text-content.font-mono {
+  font-family: var(--font-mono);
+  letter-spacing: -0.5px;
+}
+
+/* Text alignment styles */
+.teleprompter-text-content.align-center {
+  text-align: center;
+}
+.teleprompter-text-content.align-left {
+  text-align: left;
+  padding-left: 8%;
+  padding-right: 8%;
+}
+
+.teleprompter-paragraph {
+  margin-bottom: 1em;
+}
+
+.teleprompter-paragraph:last-child {
+  margin-bottom: 0;
 }
 
 /* Individual script words */
@@ -609,6 +693,42 @@ input:checked + .slider-toggle:before {
   transform: scale(1.05);
   /* A glowing cyan/accent drop shadow to clearly draw the reader's focus */
   text-shadow: 0 0 12px rgba(0, 206, 201, 0.9), 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+/* Word highlight style variations */
+.highlight-style-pill .highlight-pill {
+  background: rgba(108, 92, 231, 0.7) !important;
+  border: none !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 12px rgba(108, 92, 231, 0.3);
+}
+.highlight-style-pill .word.current {
+  color: #ffffff !important;
+  text-shadow: none !important;
+  transform: scale(1.0);
+}
+
+.highlight-style-underline .highlight-pill {
+  background: var(--accent-gradient) !important;
+  border: none !important;
+  height: 4px !important;
+  border-radius: 2px !important;
+  transform: translateY(1.2em) !important;
+  box-shadow: 0 2px 8px rgba(108, 92, 231, 0.5);
+}
+.highlight-style-underline .word.current {
+  color: #ffffff !important;
+  text-shadow: none !important;
+  transform: scale(1.0);
+}
+
+.highlight-style-minimal .highlight-pill {
+  opacity: 0 !important;
+}
+.highlight-style-minimal .word.current {
+  color: #ffffff !important;
+  text-shadow: none !important;
+  transform: scale(1.08);
 }
 
 .word.shadow-curr {
@@ -758,10 +878,10 @@ input:checked + .slider-toggle:before {
   background: rgba(0, 0, 0, 0.2);
   border: 1px solid var(--border-color);
   border-radius: 10px;
-  padding: 8px 12px;
+  padding: 10px 14px;
   color: var(--text-primary);
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: 15px;
   outline: none;
   cursor: pointer;
   width: 100%;
@@ -770,9 +890,9 @@ input:checked + .slider-toggle:before {
   appearance: none;
   background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a0a5b5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 12px center;
+  background-position: right 14px center;
   background-size: 16px;
-  padding-right: 36px;
+  padding-right: 38px;
 }
 
 .select-dropdown:focus {
@@ -790,10 +910,10 @@ input:checked + .slider-toggle:before {
   background: rgba(0, 0, 0, 0.2);
   border: 1px solid var(--border-color);
   border-radius: 10px;
-  padding: 8px 12px;
+  padding: 10px 14px;
   color: var(--text-primary);
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: 15px;
   outline: none;
   width: 100%;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -802,4 +922,11 @@ input:checked + .slider-toggle:before {
 .text-input:focus {
   border-color: var(--accent-color);
   box-shadow: var(--glow-shadow);
+}
+
+/* Utility layout grid for compact 2-column configurations */
+.settings-row-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }

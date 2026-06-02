@@ -19,7 +19,13 @@ const state = {
   settings: {
     fontSize: 2.8,
     mirror: false,
-    wpm: 130
+    wpm: 120,
+    overlayTheme: 'glass',
+    overlayHighlight: 'glow',
+    overlayFont: 'sans',
+    overlayAlign: 'center',
+    overlayOpacity: 20,
+    overlayBlur: 8
   },
   
   // Creep animation variables
@@ -81,10 +87,8 @@ function renderScript(paragraphs, allWords) {
 
   const container = document.createElement('div');
   paragraphs.forEach((para, pi) => {
-    if (pi > 0) {
-      container.appendChild(document.createElement('br'));
-      container.appendChild(document.createElement('br'));
-    }
+    const paraDiv = document.createElement('div');
+    paraDiv.className = 'teleprompter-paragraph';
     
     // Find words belonging to this paragraph
     const paraWords = allWords.filter(w => w.id >= para.startIndex && w.id < (para.startIndex + (para.words?.length || 0)));
@@ -103,11 +107,13 @@ function renderScript(paragraphs, allWords) {
       span.classList.add('interactive'); // Allow interaction/clicking
       
       _spanCache[word.id] = span;
-      container.appendChild(span);
+      paraDiv.appendChild(span);
       if (wi < paraWords.length - 1) {
-        container.appendChild(document.createTextNode(' '));
+        paraDiv.appendChild(document.createTextNode(' '));
       }
     });
+    
+    container.appendChild(paraDiv);
   });
 
   dom.teleprompterContent.innerHTML = '';
@@ -143,6 +149,31 @@ function updateVisualSettings() {
   } else {
     dom.teleprompterContent.style.transform = `translateY(${_scrollCurrent}px)`;
   }
+  
+  // Apply Font Style
+  dom.teleprompterContent.classList.remove('font-sans', 'font-mono');
+  dom.teleprompterContent.classList.add(`font-${state.settings.overlayFont || 'sans'}`);
+  
+  // Apply Alignment
+  dom.teleprompterContent.classList.remove('align-center', 'align-left');
+  dom.teleprompterContent.classList.add(`align-${state.settings.overlayAlign || 'center'}`);
+  
+  // Apply Theme/Backdrop Preset
+  dom.overlayContainer.className = 'teleprompter-overlay-container';
+  if (state.isRecording) {
+    dom.overlayContainer.classList.add('listening');
+  }
+  dom.overlayContainer.classList.add(`theme-${state.settings.overlayTheme || 'glass'}`);
+  
+  // Apply Highlight Style class
+  dom.overlayContainer.classList.remove('highlight-style-glow', 'highlight-style-pill', 'highlight-style-underline', 'highlight-style-minimal');
+  dom.overlayContainer.classList.add(`highlight-style-${state.settings.overlayHighlight || 'glow'}`);
+  
+  // Apply Backdrop Opacity & Blur variables
+  const opacity = state.settings.overlayOpacity !== undefined ? state.settings.overlayOpacity : 20;
+  const blur = state.settings.overlayBlur !== undefined ? state.settings.overlayBlur : 8;
+  dom.overlayContainer.style.setProperty('--overlay-bg-opacity', (opacity / 100).toFixed(2));
+  dom.overlayContainer.style.setProperty('--overlay-blur', `${blur}px`);
   
   movePillToWord(state.currentWordIndex);
 }
@@ -392,6 +423,13 @@ function setupIpcListeners() {
     state.settings.fontSize = update.fontSize;
     state.settings.mirror = update.mirror;
     state.lastSpeechTime = update.lastSpeechTime;
+    
+    state.settings.overlayTheme = update.overlayTheme;
+    state.settings.overlayHighlight = update.overlayHighlight;
+    state.settings.overlayFont = update.overlayFont;
+    state.settings.overlayAlign = update.overlayAlign;
+    state.settings.overlayOpacity = update.overlayOpacity;
+    state.settings.overlayBlur = update.overlayBlur;
     
     // Toggle recording states
     const wasRecording = state.isRecording;
