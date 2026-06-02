@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Teleprompter - Overlay</title>
+  <link rel="stylesheet" href="index.css">
+  <style>
+    /* Custom override for transparent overlay backdrop styling */
+    body {
+      background: transparent !important;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body class="overlay-body">
+
+  <!-- Transparent Overlay Window Wrapper -->
+  <div id="overlayContainer" class="teleprompter-overlay-container">
+    
+    <!-- Hover to reveal Control Panel -->
+    <div id="controlBar" class="overlay-control-bar interactive">
+      <!-- Drag handle for moving the frameless window -->
+      <div id="overlayDragHandle" class="overlay-drag-handle interactive">⠿ Drag</div>
+      <button id="overlayPlayBtn" class="overlay-control-btn interactive">🎙️ Start</button>
+      <button id="overlayResetBtn" class="overlay-control-btn interactive">🔄 Reset</button>
+      <button id="overlayCloseBtn" class="overlay-control-btn interactive">❌ Close</button>
+    </div>
+
+    <!-- Focus horizontal guidelines -->
+    <div class="focus-line-indicator"></div>
+
+    <!-- Scrolling Text Viewport -->
+    <div id="teleprompterScroll" class="teleprompter-scroll-viewport">
+      <div id="teleprompterContent" class="teleprompter-text-content">
+        <!-- Script words will be injected here -->
+      </div>
+    </div>
+
+    <!-- Highlight Pill for absolute smooth text tracking -->
+    <div id="highlightPill" class="highlight-pill"></div>
+
+  </div>
+
+  <script type="module" src="overlay.js"></script>
+</body>
+</html>

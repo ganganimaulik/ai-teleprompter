@@ -1,0 +1,31 @@
+{
+  "name": "ai-teleprompter",
+  "version": "1.0.0",
+  "description": "Desktop AI teleprompter app that stays hidden from screen sharing and recording software",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron ."
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "^31.0.0"
+  },
+  "build": {
+    "appId": "com.ai.teleprompter",
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        "dmg"
+      ],
+      "entitlements": "entitlements.plist",
+      "entitlementsInherit": "entitlements.plist",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "This application requires microphone access to listen to your voice and align the script scrolling in real-time."
+      }
+    }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

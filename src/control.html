@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Teleprompter - Control Panel</title>
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+  <!-- Custom Titlebar for App Window -->
+  <div class="titlebar">
+    <div class="titlebar-title">AI TELEPROMPTER — CONTROL PANEL</div>
+    <div class="titlebar-controls">
+      <button id="themeToggle" class="overlay-control-btn" title="Toggle Theme">
+        <span>🌓 Theme</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="app-container">
+    
+    <!-- Left Column: Editor & Settings -->
+    <div class="left-column">
+      
+      <!-- Script Editor -->
+      <div class="panel-editor glass-panel">
+        <div class="panel-header">
+          <h2 class="panel-title">Your Script</h2>
+          <div class="btn-group">
+            <button id="sampleScriptBtn" class="btn btn-secondary">Load Sample</button>
+            <button id="clearScriptBtn" class="btn btn-secondary">Clear</button>
+          </div>
+        </div>
+        <textarea id="scriptInput" placeholder="Paste or type your presentation script here..."></textarea>
+        
+        <button id="launchOverlayBtn" class="btn btn-primary launcher-btn">
+          ✨ Launch Teleprompter Overlay
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Right Column: Speech Status & Controls -->
+    <div class="right-column">
+      
+      <!-- AI Engine Status -->
+      <div class="panel-status glass-panel">
+        <div class="status-badge-row">
+          <span class="settings-label">Engine Status</span>
+          <span id="statusBadge" class="status-badge status-idle">
+            <span class="pulse-dot"></span>
+            <span id="statusText">Initializing...</span>
+          </span>
+        </div>
+        
+        <!-- Progress bar for loading ONNX models -->
+        <div id="modelProgress" class="progress-bar-container">
+          <div id="modelProgressBar" class="progress-bar-fill"></div>
+        </div>
+        
+        <div id="engineIndicator" class="engine-info">Engine: Loading AI model...</div>
+      </div>
+
+      <!-- Settings panel -->
+      <div class="panel-settings glass-panel">
+        <h2 class="panel-title" style="margin-bottom: 10px;">Configurations</h2>
+        
+        <div class="settings-group">
+          <span class="settings-label">Target Speed (WPM)</span>
+          <div class="slider-container">
+            <input type="range" id="wpmRange" min="60" max="250" value="130">
+            <span id="wpmRangeVal" class="slider-val">130 WPM</span>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <span class="settings-label">Overlay Font Size</span>
+          <div class="slider-container">
+            <input type="range" id="fontSizeRange" min="1.5" max="5.0" step="0.1" value="2.8">
+            <span id="fontSizeVal" class="slider-val">2.8rem</span>
+          </div>
+        </div>
+
+        <div class="toggle-row">
+          <span class="settings-label">Mirror Mode (Horizontal)</span>
+          <label class="switch">
+            <input type="checkbox" id="mirrorToggle">
+            <span class="slider-toggle"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Real-time Speech Log -->
+      <div class="panel-transcript glass-panel">
+        <span class="settings-label" style="margin-bottom: 10px;">Live ASR Transcript Logs</span>
+        <div id="transcriptBox" class="transcript-log-box">
+          <span class="transcript-placeholder">Start speaking to see your text transcribed in real-time...</span>
+        </div>
+        <div id="interimBox" class="interim-text" style="margin-top: 6px; font-size: 13px;"></div>
+        
+        <div class="btn-group" style="margin-top: 14px;">
+          <button id="startBtn" class="btn btn-primary" style="flex: 1;" disabled>
+            🎙️ Start Tracking
+          </button>
+          <button id="stopBtn" class="btn btn-danger" style="flex: 1;" disabled>
+            ⏹️ Stop
+          </button>
+        </div>
+        <div class="btn-group" style="margin-top: 10px;">
+          <button id="resetBtn" class="btn btn-secondary" style="flex: 1;">
+            🔄 Reset Prompt Position
+          </button>
+        </div>
+      </div>
+
+      <!-- Presentation Stats -->
+      <div class="panel-stats glass-panel">
+        <h2 class="panel-title" style="margin-bottom: 10px;">Performance stats</h2>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div id="wpmValue" class="stat-num">0</div>
+            <div class="stat-label">Speaking WPM</div>
+          </div>
+          <div class="stat-card">
+            <div id="progressValue" class="stat-num">0%</div>
+            <div class="stat-label">Progress</div>
+          </div>
+        </div>
+        <div class="stat-card" style="margin-top: 4px;">
+          <div id="etaValue" class="stat-num">--</div>
+          <div class="stat-label">Estimated Remaining Time</div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script type="module" src="control.js"></script>
+</body>
+</html>
