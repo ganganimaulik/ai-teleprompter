@@ -94,7 +94,9 @@ const state = {
     overlayFont: 'sans',
     overlayAlign: 'center',
     overlayOpacity: 20,
-    overlayBlur: 8
+    overlayBlur: 8,
+    overlayHidden: false,
+    overlayFaded: false
   },
   
   vadWorker: null,    
@@ -784,6 +786,8 @@ function syncStateToOverlay(scrollMode = 'snap') {
     overlayAlign: state.settings.overlayAlign,
     overlayOpacity: state.settings.overlayOpacity,
     overlayBlur: state.settings.overlayBlur,
+    overlayHidden: state.settings.overlayHidden,
+    overlayFaded: state.settings.overlayFaded,
     
     // Commands
     scrollMode: scrollMode
@@ -1606,6 +1610,22 @@ function bindEvents() {
     };
   }
 
+  // Shortcuts modal
+  const shortcutsBtn = $('shortcutsBtn');
+  const shortcutsModal = $('shortcutsModal');
+  const closeShortcutsBtn = $('closeShortcutsBtn');
+  
+  if (shortcutsBtn && shortcutsModal) {
+    shortcutsBtn.onclick = () => {
+      shortcutsModal.classList.remove('hidden');
+    };
+  }
+  if (closeShortcutsBtn && shortcutsModal) {
+    closeShortcutsBtn.onclick = () => {
+      shortcutsModal.classList.add('hidden');
+    };
+  }
+
   // Pre-load model immediately on startup to avoid delays
   setTimeout(() => {
     initWorkers();
@@ -1669,6 +1689,26 @@ function setupIpcListeners() {
       nudgePosition('up');
     } else if (hotkey === 'nudge-down') {
       nudgePosition('down');
+    } else if (hotkey === 'wpm-down') {
+      let val = Math.max(60, state.settings.wpm - 10);
+      if (dom.wpmRange) dom.wpmRange.value = val;
+      if (dom.wpmRangeVal) dom.wpmRangeVal.textContent = `${val} WPM`;
+      state.settings.wpm = val;
+      syncStateToOverlay('instant');
+      savePersistedSettings();
+    } else if (hotkey === 'wpm-up') {
+      let val = Math.min(250, state.settings.wpm + 10);
+      if (dom.wpmRange) dom.wpmRange.value = val;
+      if (dom.wpmRangeVal) dom.wpmRangeVal.textContent = `${val} WPM`;
+      state.settings.wpm = val;
+      syncStateToOverlay('instant');
+      savePersistedSettings();
+    } else if (hotkey === 'toggle-visibility') {
+      state.settings.overlayHidden = !state.settings.overlayHidden;
+      syncStateToOverlay('instant');
+    } else if (hotkey === 'toggle-opacity') {
+      state.settings.overlayFaded = !state.settings.overlayFaded;
+      syncStateToOverlay('instant');
     }
   });
 

@@ -14,10 +14,16 @@
       <svg class="titlebar-logo" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
       AI TELEPROMPTER — CONTROL CENTER
     </div>
-    <button id="themeToggle" class="titlebar-theme-btn" title="Toggle Theme">
-      <svg class="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
-      <svg class="theme-icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
-    </button>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <button id="shortcutsBtn" class="titlebar-theme-btn" title="Keyboard Shortcuts" style="width: auto; padding: 0 10px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3zM8 12h8M12 8v8"/></svg>
+        SHORTCUTS
+      </button>
+      <button id="themeToggle" class="titlebar-theme-btn" title="Toggle Theme">
+        <svg class="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+        <svg class="theme-icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+      </button>
+    </div>
   </div>
 
   <div class="app-container">
@@ -483,6 +489,28 @@
       
       <div class="modal-footer">
         <button id="closeAnalyticsBtn2" class="btn btn-secondary" style="width: 100%;">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Keyboard Shortcuts Modal -->
+  <div id="shortcutsModal" class="modal-overlay hidden">
+    <div class="modal-content glass-panel animate-slide-up" style="max-width: 500px;">
+      <div class="modal-header">
+        <h2 class="modal-title">Keyboard Shortcuts</h2>
+        <button id="closeShortcutsBtn" class="modal-close-btn" title="Close">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 10px;">
+        <div class="shortcuts-grid">
+          <div class="shortcut-row"><span class="shortcut-key">Option + Space</span> <span class="shortcut-desc">Toggle Play / Pause</span></div>
+          <div class="shortcut-row"><span class="shortcut-key">Option + Up</span> <span class="shortcut-desc">Nudge to previous sentence</span></div>
+          <div class="shortcut-row"><span class="shortcut-key">Option + Down</span> <span class="shortcut-desc">Nudge to next sentence</span></div>
+          <div class="shortcut-row"><span class="shortcut-key">Option + [</span> <span class="shortcut-desc">Decrease Target Speed (-10 WPM)</span></div>
+          <div class="shortcut-row"><span class="shortcut-key">Option + ]</span> <span class="shortcut-desc">Increase Target Speed (+10 WPM)</span></div>
+          <div class="shortcut-row"><span class="shortcut-key">Option + H</span> <span class="shortcut-desc">Toggle Overlay Visibility (Hide/Show)</span></div>
+          <div class="shortcut-row"><span class="shortcut-key">Option + O</span> <span class="shortcut-desc">Toggle Overlay Opacity (Faded/Solid)</span></div>
+          <div class="shortcut-row"><span class="shortcut-key">Option + Escape</span> <span class="shortcut-desc">Close Teleprompter Overlay</span></div>
+        </div>
       </div>
     </div>
   </div>

@@ -174,6 +174,15 @@ function updateVisualSettings() {
   dom.overlayContainer.style.setProperty('--overlay-bg-opacity', (opacity / 100).toFixed(2));
   dom.overlayContainer.style.setProperty('--overlay-blur', `${blur}px`);
   
+  // Apply Stealth / Hide features
+  if (state.settings.overlayHidden) {
+    document.body.style.opacity = '0';
+  } else if (state.settings.overlayFaded) {
+    document.body.style.opacity = '0.15';
+  } else {
+    document.body.style.opacity = '1';
+  }
+  
   movePillToWord(state.currentWordIndex);
 }
 
@@ -457,6 +466,9 @@ function setupIpcListeners() {
     state.settings.overlayAlign = update.overlayAlign;
     state.settings.overlayOpacity = update.overlayOpacity;
     state.settings.overlayBlur = update.overlayBlur;
+    
+    state.settings.overlayHidden = update.overlayHidden;
+    state.settings.overlayFaded = update.overlayFaded;
     
     // Toggle recording states
     const wasRecording = state.isRecording;

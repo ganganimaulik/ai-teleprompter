@@ -283,6 +283,34 @@ app.whenReady().then(async () => {
     }
   });
 
+  // Option+[: Decrease WPM
+  globalShortcut.register('Option+[', () => {
+    if (controlWindow && !controlWindow.isDestroyed()) {
+      controlWindow.webContents.send('hotkey-triggered', 'wpm-down');
+    }
+  });
+
+  // Option+]: Increase WPM
+  globalShortcut.register('Option+]', () => {
+    if (controlWindow && !controlWindow.isDestroyed()) {
+      controlWindow.webContents.send('hotkey-triggered', 'wpm-up');
+    }
+  });
+
+  // Option+H: Toggle overlay visibility
+  globalShortcut.register('Option+H', () => {
+    if (controlWindow && !controlWindow.isDestroyed()) {
+      controlWindow.webContents.send('hotkey-triggered', 'toggle-visibility');
+    }
+  });
+
+  // Option+O: Toggle overlay opacity
+  globalShortcut.register('Option+O', () => {
+    if (controlWindow && !controlWindow.isDestroyed()) {
+      controlWindow.webContents.send('hotkey-triggered', 'toggle-opacity');
+    }
+  });
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createControlWindow();

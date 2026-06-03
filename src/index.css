@@ -1725,3 +1725,47 @@ body.light-theme .ai-feedback-box {
   0%, 100% { transform: scale(0.3); opacity: 0.2; }
   50% { transform: scale(1); opacity: 1; }
 }
+
+/* ═══════════════════════════════════════════════════════
+   KEYBOARD SHORTCUTS MODAL
+   ═══════════════════════════════════════════════════════ */
+.shortcuts-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shortcut-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+body.light-theme .shortcut-row {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.shortcut-key {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 13px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+body.light-theme .shortcut-key {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.shortcut-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
