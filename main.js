@@ -4,6 +4,10 @@ const path = require('path');
 const http = require('http');
 const fs = require('fs');
 
+try {
+  require('electron-reloader')(module);
+} catch (_) {}
+
 let server = null;
 let serverPort = 0;
 let controlWindow = null;

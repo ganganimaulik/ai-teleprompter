@@ -29,6 +29,24 @@ const state = {
   scriptNormTokens: [],  
   tokenIndex: null,      
 
+  // AI and Performance Coach State
+  undoStack: [],
+  performanceData: {
+    isActive: false,
+    timeline: [], // array of { time: Date.now(), wordIndex: X, wpm: Y }
+    fillers: {
+      um: 0,
+      uh: 0,
+      like: 0,
+      youknow: 0,
+      actually: 0,
+      so: 0
+    },
+    startTrackingTime: 0,
+    totalSpeakingTimeMs: 0,
+    matchScores: []
+  },
+
   currentWordIndex: 0,
   currentParaIndex: 0,
   paragraphCompleteTimer: null,
@@ -61,6 +79,8 @@ const state = {
 
   // Speech activity tracking
   lastSpeechTime: 0,
+  isAdLibbing: false,
+  consecutiveLowScores: 0,
 
   settings: { 
     fontSize: 2.8, 
@@ -390,6 +410,17 @@ function snapTo(globalIdx, smooth) {
   state.currentWordIndex = globalIdx;
   state.lastAdvanceTime  = Date.now();
   
+  if (state.performanceData.isActive) {
+    const elapsedMs = Date.now() - state.performanceData.startTrackingTime;
+    const wordsRead = globalIdx;
+    const currentWpm = elapsedMs > 5000 ? Math.round(wordsRead / (elapsedMs / 60000)) : state.settings.wpm;
+    state.performanceData.timeline.push({
+      time: Date.now(),
+      wordIndex: globalIdx,
+      wpm: currentWpm
+    });
+  }
+
   updateShadowCursor();
   updateProgress();
   updateWPM();
@@ -417,6 +448,8 @@ function seekToWord(wordIdx) {
   state.creepTargetIndex = wordIdx;
   state.shadowIndex = -1;
   state.lastAdvanceTime = Date.now();
+  state.isAdLibbing = false;
+  state.consecutiveLowScores = 0;
 
   state.hypotheses        = [];
   state.accumulatedText   = '';
@@ -512,6 +545,8 @@ function resetPosition(clearTx = true) {
   state.creepTargetIndex = 0;
   state.shadowIndex      = -1;
   state.lastSpeechTime   = 0;
+  state.isAdLibbing      = false;
+  state.consecutiveLowScores = 0;
   _txCount               = 0;
 
   if (clearTx) { 
@@ -540,6 +575,27 @@ function processTranscript(chunk, isFinal) {
   // Track speech activity — used by stall nudge silence gate
   state.lastSpeechTime = Date.now();
 
+  // Filler word detection
+  if (state.performanceData.isActive) {
+    const textLower = chunk.toLowerCase();
+    
+    // Check phrases first
+    const youKnowMatches = textLower.match(/\byou know\b/g);
+    if (youKnowMatches) {
+      state.performanceData.fillers.youknow += youKnowMatches.length;
+    }
+    
+    // Check individual words
+    const words = textLower.replace(/[^a-z\s]/g, ' ').split(/\s+/);
+    words.forEach(w => {
+      if (w === 'um') state.performanceData.fillers.um++;
+      else if (w === 'uh') state.performanceData.fillers.uh++;
+      else if (w === 'like') state.performanceData.fillers.like++;
+      else if (w === 'actually') state.performanceData.fillers.actually++;
+      else if (w === 'so') state.performanceData.fillers.so++;
+    });
+  }
+
   const acc = isFinal ? accumulateTranscript(chunk) : (state.accumulatedText ? state.accumulatedText + ' ' + chunk : chunk);
   if (isFinal) state.recognitionBuffer = [...state.recognitionBuffer, chunk].slice(-8);
 
@@ -560,6 +616,10 @@ function processTranscript(chunk, isFinal) {
     if (m && (!best || m.score > best.score)) { best = m; }
   }
 
+  if (best && state.performanceData.isActive) {
+    state.performanceData.matchScores.push(best.rawScore || best.score);
+  }
+
   // ── Update beam ──
   const hyp = updateBeam(best);
 
@@ -574,6 +634,18 @@ function processTranscript(chunk, isFinal) {
 
     scheduleStallNudge();
     state.creepTargetIndex = target;
+
+    state.consecutiveLowScores = 0;
+    if (state.isAdLibbing) {
+      state.isAdLibbing = false;
+      syncStateToOverlay('snap');
+    }
+  } else {
+    state.consecutiveLowScores++;
+    if (state.consecutiveLowScores >= 2 && !state.isAdLibbing) {
+      state.isAdLibbing = true;
+      syncStateToOverlay();
+    }
   }
 
   // ── Paragraph completion ──
@@ -672,7 +744,7 @@ function scheduleStallNudge() {
     if (stalledMs >= CFG.STALL_MS) {
       const speechRecency  = Date.now() - state.lastSpeechTime;
       const userIsSpeaking = state.lastSpeechTime > 0 && speechRecency < 5000;
-      if (userIsSpeaking) {
+      if (userIsSpeaking && !state.isAdLibbing) {
         const wpm    = effectiveWpm();
         const words  = Math.max(1, Math.round(wpm * (stalledMs / 60000) * 0.35));
         const target = Math.min(state.currentWordIndex + words, state.wordCount - 1);
@@ -698,6 +770,7 @@ function syncStateToOverlay(scrollMode = 'snap') {
     shadowIndex: state.shadowIndex,
     lastSpeechTime: state.lastSpeechTime,
     isRecording: state.isRecording,
+    isAdLibbing: state.isAdLibbing,
     
     // Configurations
     wpm: state.settings.wpm,
@@ -895,6 +968,13 @@ async function startAudio() {
     state.lastAdvanceTime = Date.now();
     if (!state.sessionStartTime) state.sessionStartTime = Date.now();
 
+    // Reset presentation performance data
+    state.performanceData.isActive = true;
+    state.performanceData.startTrackingTime = Date.now();
+    state.performanceData.timeline = [{ time: Date.now(), wordIndex: state.currentWordIndex, wpm: state.settings.wpm || 120 }];
+    state.performanceData.fillers = { um: 0, uh: 0, like: 0, youknow: 0, actually: 0, so: 0 };
+    state.performanceData.matchScores = [];
+
     setStatus('recording', 'Listening...');
     updateButtons(true);
     scheduleStallNudge();
@@ -933,6 +1013,12 @@ function stopAudio() {
     state.stallNudgeTimer = null;
   }
 
+  const finishedRecording = state.performanceData.isActive;
+  if (state.performanceData.isActive) {
+    state.performanceData.totalSpeakingTimeMs = Date.now() - state.performanceData.startTrackingTime;
+    state.performanceData.isActive = false;
+  }
+
   setStatus('idle', 'Stopped');
   updateButtons(false);
 
@@ -940,6 +1026,11 @@ function stopAudio() {
   if (waveform) waveform.classList.remove('active');
 
   syncStateToOverlay('instant');
+
+  if (finishedRecording) {
+    // Small delay to let overlay finish syncing before popping modal
+    setTimeout(showSessionAnalytics, 400);
+  }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1278,6 +1369,7 @@ function bindEvents() {
       setStatus('loading', 'Loading Speech model...');
       if (dom.engineIndicator) dom.engineIndicator.textContent = 'Engine: Moonshine AI (Loading...)';
       if (dom.modelProgress) dom.modelProgress.classList.add('active');
+      if (dom.startBtn) dom.startBtn.setAttribute('disabled', 'true');
     } else {
       // Modal engine is always ready immediately
       state.modelReady = true;
@@ -1330,7 +1422,15 @@ function bindEvents() {
       window.electronAPI.controlAction('open-overlay', {
         paragraphs,
         allWords,
-        settings: state.settings
+        settings: state.settings,
+        currentState: {
+          currentWordIndex: state.currentWordIndex,
+          creepTargetIndex: state.creepTargetIndex,
+          shadowIndex: state.shadowIndex,
+          lastSpeechTime: state.lastSpeechTime,
+          isRecording: state.isRecording,
+          isAdLibbing: state.isAdLibbing
+        }
       });
     }
   };
@@ -1353,6 +1453,156 @@ function bindEvents() {
       tabBtnTracking.classList.remove('active');
       tabPaneStyles.classList.add('active');
       tabPaneTracking.classList.remove('active');
+    };
+  }
+
+  // AI Assistant panel toggle
+  const aiAssistBtn = $('aiAssistBtn');
+  const aiAssistantPanel = $('aiAssistantPanel');
+  if (aiAssistBtn && aiAssistantPanel) {
+    aiAssistBtn.onclick = () => {
+      aiAssistantPanel.classList.toggle('hidden');
+      aiAssistBtn.classList.toggle('active');
+    };
+  }
+
+  // Persist API Key on change
+  const geminiApiKeyInput = $('geminiApiKey');
+  if (geminiApiKeyInput) {
+    geminiApiKeyInput.onchange = (e) => {
+      localStorage.setItem('gemini_api_key', e.target.value.trim());
+    };
+  }
+
+  // Presets mapping (Checkboxes)
+  const presetCheckboxes = document.querySelectorAll('.ai-preset-checkbox');
+  presetCheckboxes.forEach(cb => {
+    // Restore from localStorage
+    const saved = localStorage.getItem(`teleprompter_ai_${cb.value}`);
+    if (saved === 'true') {
+      cb.checked = true;
+      cb.closest('.ai-preset-btn').classList.add('active');
+    }
+
+    cb.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        e.target.closest('.ai-preset-btn').classList.add('active');
+      } else {
+        e.target.closest('.ai-preset-btn').classList.remove('active');
+      }
+      localStorage.setItem(`teleprompter_ai_${cb.value}`, e.target.checked);
+    });
+  });
+
+  // AI execution run button
+  const aiRunBtn = $('aiRunBtn');
+  const aiUndoBtn = $('aiUndoBtn');
+  if (aiRunBtn) {
+    aiRunBtn.onclick = async () => {
+      const apiKey = localStorage.getItem('gemini_api_key') || (geminiApiKeyInput ? geminiApiKeyInput.value.trim() : '');
+      if (!apiKey) {
+        alert('Please enter your Gemini API Key first.');
+        return;
+      }
+      
+      const originalText = dom.scriptInput.value.trim();
+      if (!originalText) {
+        alert('Please enter a script to optimize.');
+        return;
+      }
+
+      const spinner = aiRunBtn.querySelector('.ai-spinner');
+      const textSpan = aiRunBtn.querySelector('span');
+      
+      // Update UI state to loading
+      aiRunBtn.setAttribute('disabled', 'true');
+      if (spinner) {
+        spinner.classList.remove('hidden');
+        spinner.style.display = 'inline-block';
+      }
+      if (textSpan) textSpan.textContent = 'Optimizing...';
+      
+      try {
+        const customPromptArea = $('aiCustomPrompt');
+        const customInstruction = customPromptArea ? customPromptArea.value.trim() : '';
+        
+        let prompt = '';
+        let systemInstruction = "You are a professional presentation writer. Modify the user's script as instructed. Return ONLY the modified script text. Do not include titles, notes, introductions, or closing comments. Do not surround the text in markdown code fences.";
+        
+        // Check active presets
+        const activeCheckboxes = document.querySelectorAll('.ai-preset-checkbox:checked');
+        const presets = Array.from(activeCheckboxes).map(cb => cb.value);
+        
+        let instructions = [];
+        if (presets.includes('conversational')) instructions.push("- Rewrite this script to make it sound conversational and natural when spoken out loud.");
+        if (presets.includes('breaths')) instructions.push("- Insert breath markers '/' at natural pauses without changing any words.");
+        if (presets.includes('format')) instructions.push("- Format numbers, currencies, and acronyms to their spelled-out verbal forms.");
+        if (presets.includes('shorten')) instructions.push("- Make this script concise and short while retaining the core information.");
+        
+        if (customInstruction) {
+          instructions.push(`- ${customInstruction}`);
+        }
+        
+        if (instructions.length > 0) {
+          prompt = `Optimize the following script according to these instructions:\n${instructions.join('\n')}\n\nScript:\n${originalText}`;
+        } else {
+          prompt = `Optimize the following script to improve readability:\n\nScript:\n${originalText}`;
+        }
+        
+        const resultText = await callGeminiAPI(prompt, systemInstruction);
+        
+        // Save to undo stack
+        state.undoStack.push(originalText);
+        if (aiUndoBtn) aiUndoBtn.classList.remove('hidden');
+        
+        dom.scriptInput.value = resultText;
+        renderScript();
+        localStorage.setItem('teleprompter_script', resultText);
+        
+      } catch (err) {
+        console.error('Gemini Optimization error:', err);
+        alert(`AI Optimization failed: ${err.message}`);
+      } finally {
+        // Reset UI state
+        aiRunBtn.removeAttribute('disabled');
+        if (spinner) {
+          spinner.classList.add('hidden');
+          spinner.style.display = 'none';
+        }
+        if (textSpan) textSpan.textContent = 'Run AI Writer';
+      }
+    };
+  }
+
+  // Undo button
+  if (aiUndoBtn) {
+    aiUndoBtn.onclick = () => {
+      if (state.undoStack.length > 0) {
+        const prev = state.undoStack.pop();
+        dom.scriptInput.value = prev;
+        renderScript();
+        localStorage.setItem('teleprompter_script', prev);
+        
+        if (state.undoStack.length === 0) {
+          aiUndoBtn.classList.add('hidden');
+        }
+      }
+    };
+  }
+
+  // Analytics Close buttons
+  const closeAnalyticsBtn = $('closeAnalyticsBtn');
+  const closeAnalyticsBtn2 = $('closeAnalyticsBtn2');
+  const analyticsModal = $('analyticsModal');
+  
+  if (closeAnalyticsBtn && analyticsModal) {
+    closeAnalyticsBtn.onclick = () => {
+      analyticsModal.classList.add('hidden');
+    };
+  }
+  if (closeAnalyticsBtn2 && analyticsModal) {
+    closeAnalyticsBtn2.onclick = () => {
+      analyticsModal.classList.add('hidden');
     };
   }
 
@@ -1454,4 +1704,281 @@ window.addEventListener('DOMContentLoaded', () => {
   bindEvents();
   setupIpcListeners();
   loadPersistedSettings();
+  
+  // Persist API Key to UI input on load
+  const savedApiKey = localStorage.getItem('gemini_api_key');
+  if (savedApiKey && $('geminiApiKey')) {
+    $('geminiApiKey').value = savedApiKey;
+  }
 });
+
+// ═══════════════════════════════════════════════════════
+// AI PRESENTATION COACH LOGIC
+// ═══════════════════════════════════════════════════════
+function showSessionAnalytics() {
+  const analyticsModal = $('analyticsModal');
+  if (!analyticsModal) return;
+
+  // Set session date and time
+  const dateStr = new Date().toLocaleDateString(undefined, {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  const dateEl = $('analyticsSessionDate');
+  if (dateEl) dateEl.textContent = `Session: ${dateStr}`;
+
+  // 1. Duration metrics
+  const durationSec = Math.round(state.performanceData.totalSpeakingTimeMs / 1000) || 1;
+  const mins = Math.floor(durationSec / 60);
+  const secs = durationSec % 60;
+  const durationStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  
+  const coachDuration = $('coachDuration');
+  if (coachDuration) coachDuration.textContent = durationStr;
+
+  // 2. Average WPM
+  const avgWpm = Math.round((state.currentWordIndex / (state.performanceData.totalSpeakingTimeMs / 60000))) || 0;
+  const coachAvgWpm = $('coachAvgWpm');
+  if (coachAvgWpm) coachAvgWpm.textContent = avgWpm || '—';
+
+  // 3. Deviation from Target WPM
+  const targetWpm = state.settings.wpm || 120;
+  const diffPercent = Math.round(((avgWpm - targetWpm) / targetWpm) * 100);
+  const diffText = diffPercent === 0 ? 'On Target' : `${diffPercent > 0 ? '+' : ''}${diffPercent}% vs Target`;
+  const coachPaceDiff = $('coachPaceDiff');
+  if (coachPaceDiff) coachPaceDiff.textContent = `Target: ${targetWpm} WPM (${diffText})`;
+
+  // 4. Clarity matching
+  const scores = state.performanceData.matchScores;
+  const clarityPct = scores.length > 0
+    ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100)
+    : 100;
+  const coachClarity = $('coachClarity');
+  if (coachClarity) coachClarity.textContent = `${clarityPct}%`;
+
+  // 5. Completion Rate
+  const completionPct = Math.min(100, Math.round((state.currentWordIndex / state.wordCount) * 100)) || 0;
+  const coachCompletionRate = $('coachCompletionRate');
+  if (coachCompletionRate) coachCompletionRate.textContent = `Read ${completionPct}% of script`;
+
+  // 6. Subtitle summary
+  const coachSummarySubtitle = $('coachSummarySubtitle');
+  if (coachSummarySubtitle) {
+    coachSummarySubtitle.textContent = `You spoke ${state.currentWordIndex} words over ${mins > 0 ? mins + 'm ' : ''}${secs}s. Here is your coaching report.`;
+  }
+
+  // 7. Filler word counts
+  const fillers = state.performanceData.fillers;
+  const totalFillers = fillers.um + fillers.uh + fillers.like + fillers.youknow + fillers.actually + fillers.so;
+  const coachFillerCount = $('coachFillerCount');
+  if (coachFillerCount) coachFillerCount.textContent = totalFillers;
+
+  // 8. Breakdown lists
+  const pillsContainer = $('coachFillerPills');
+  if (pillsContainer) {
+    pillsContainer.innerHTML = '';
+    let hasFillers = false;
+    const labels = { um: 'Um', uh: 'Uh', like: 'Like', youknow: 'You know', actually: 'Actually', so: 'So' };
+    for (const key in fillers) {
+      if (fillers[key] > 0) {
+        hasFillers = true;
+        const pill = document.createElement('div');
+        pill.className = 'filler-pill';
+        pill.innerHTML = `<span>${labels[key]}</span> <span class="filler-pill-count">${fillers[key]}</span>`;
+        pillsContainer.appendChild(pill);
+      }
+    }
+    if (!hasFillers) {
+      pillsContainer.innerHTML = '<div class="filler-pill empty"><span>No filler words detected!</span><span>Outstanding job! 🎉</span></div>';
+    }
+  }
+
+  // 9. Draw SVG Line Chart
+  const timeline = state.performanceData.timeline;
+  const chartLine = $('chartLinePath');
+  const chartArea = $('chartAreaPath');
+  const targetLine = $('chartTargetLine');
+  const chartTargetLabel = $('chartTargetLabel');
+  
+  if (chartLine && chartArea && targetLine) {
+    if (timeline.length < 2) {
+      chartLine.setAttribute('d', 'M 0 80 L 600 80');
+      chartArea.setAttribute('d', 'M 0 80 L 600 80 L 600 160 L 0 160 Z');
+      targetLine.setAttribute('y1', 80);
+      targetLine.setAttribute('y2', 80);
+    } else {
+      const minTime = timeline[0].time;
+      const maxTime = timeline[timeline.length - 1].time;
+      const timeRange = maxTime - minTime || 1;
+      
+      const wpmValues = timeline.map(p => p.wpm);
+      const maxWpm = Math.max(200, ...wpmValues, targetWpm + 50);
+      const minWpm = Math.min(60, ...wpmValues, targetWpm - 50);
+      const wpmRange = maxWpm - minWpm || 1;
+      
+      // Calculate target line Y position
+      const targetY = 160 - Math.round(((targetWpm - minWpm) / wpmRange) * 140) - 10;
+      targetLine.setAttribute('y1', targetY);
+      targetLine.setAttribute('y2', targetY);
+      if (chartTargetLabel) chartTargetLabel.textContent = `Target (${targetWpm} WPM)`;
+      
+      let pathD = '';
+      let areaD = '';
+      
+      timeline.forEach((pt, i) => {
+        const x = Math.round(((pt.time - minTime) / timeRange) * 600);
+        const y = 160 - Math.round(((pt.wpm - minWpm) / wpmRange) * 140) - 10;
+        
+        if (i === 0) {
+          pathD = `M ${x} ${y}`;
+          areaD = `M ${x} 160 L ${x} ${y}`;
+        } else {
+          pathD += ` L ${x} ${y}`;
+          areaD += ` L ${x} ${y}`;
+        }
+      });
+      areaD += ` L 600 160 Z`;
+      
+      chartLine.setAttribute('d', pathD);
+      chartArea.setAttribute('d', areaD);
+    }
+  }
+
+  // 10. Letter Grade computation
+  let score = 100;
+  const paceErr = Math.abs(avgWpm - targetWpm);
+  score -= Math.min(25, paceErr * 1.5);
+  score -= Math.min(20, totalFillers * 2.5);
+  score -= Math.min(15, (100 - clarityPct) * 0.8);
+  
+  let letterGrade = 'C';
+  if (score >= 97) letterGrade = 'A+';
+  else if (score >= 93) letterGrade = 'A';
+  else if (score >= 90) letterGrade = 'A-';
+  else if (score >= 87) letterGrade = 'B+';
+  else if (score >= 83) letterGrade = 'B';
+  else if (score >= 80) letterGrade = 'B-';
+  else if (score >= 75) letterGrade = 'C+';
+  
+  const coachOverallGrade = $('coachOverallGrade');
+  if (coachOverallGrade) coachOverallGrade.textContent = letterGrade;
+  
+  const gradeCircleFill = $('gradeCircleFill');
+  if (gradeCircleFill) {
+    gradeCircleFill.setAttribute('stroke-dasharray', `${Math.max(10, score)}, 100`);
+  }
+
+  // Show Modal Overlay
+  analyticsModal.classList.remove('hidden');
+
+  // 11. Run AI Coach Assessment
+  const apiKey = localStorage.getItem('gemini_api_key') || ($('geminiApiKey') ? $('geminiApiKey').value.trim() : '');
+  const feedbackEl = $('coachAiAssessment');
+  const spinnerEl = $('coachAiSpinner');
+  
+  if (feedbackEl) {
+    if (!apiKey) {
+      feedbackEl.textContent = 'Enter your Gemini API Key in the "AI Assistant" sidebar panel to get an automated presentation coach review and personalized delivery tips.';
+      if (spinnerEl) spinnerEl.classList.add('hidden');
+      return;
+    }
+    
+    feedbackEl.textContent = '';
+    if (spinnerEl) spinnerEl.classList.remove('hidden');
+    
+    const contextPrompt = `You are a professional presentation coach. Analyze the following speech stats for a presentation rehearsal:
+- Script Length: ${state.wordCount} words
+- Read Count: ${state.currentWordIndex} words (${completionPct}% complete)
+- Time Spoken: ${durationStr}
+- Average Pacing: ${avgWpm} WPM (Target: ${targetWpm} WPM)
+- Filler Words Spoken: ${totalFillers} (${Object.entries(fillers).map(([k,v]) => `${k}:${v}`).join(', ')})
+- Alignment Clarity: ${clarityPct}%
+
+Original Script Context:
+"""
+${state.words.slice(0, 150).map(w => w.text).join(' ')}${state.wordCount > 150 ? '...' : ''}
+"""
+
+Provide exactly 3 sentences of concise, constructive, high-impact verbal coaching feedback for improvement. Speak directly to the presenter (use "you"). Do not use headings or bullet points. Make it sound encouraging and professional.`;
+
+    callGeminiAPI(contextPrompt)
+      .then(text => {
+        if (spinnerEl) spinnerEl.classList.add('hidden');
+        typeText(feedbackEl, text);
+      })
+      .catch(err => {
+        if (spinnerEl) spinnerEl.classList.add('hidden');
+        feedbackEl.textContent = `Failed to contact AI Coach: ${err.message}. Make sure your Gemini API key is correct.`;
+      });
+  }
+}
+
+function typeText(element, text) {
+  element.textContent = '';
+  let i = 0;
+  function tick() {
+    if (i < text.length) {
+      element.textContent += text.charAt(i);
+      i++;
+      setTimeout(tick, 8);
+    }
+  }
+  tick();
+}
+
+async function callGeminiAPI(prompt, systemInstruction = '') {
+  const apiKey = localStorage.getItem('gemini_api_key') || ($('geminiApiKey') ? $('geminiApiKey').value.trim() : '');
+  if (!apiKey) {
+    throw new Error('Gemini API Key is missing. Please provide it in the AI Assistant sidebar panel.');
+  }
+
+  const model = 'gemini-2.5-flash';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  const payload = {
+    contents: [
+      {
+        parts: [
+          {
+            text: prompt
+          }
+        ]
+      }
+    ]
+  };
+
+  if (systemInstruction) {
+    payload.systemInstruction = {
+      parts: [
+        {
+          text: systemInstruction
+        }
+      ]
+    };
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    const errMsg = errData?.error?.message || `HTTP ${response.status} ${response.statusText}`;
+    throw new Error(errMsg);
+  }
+
+  const data = await response.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) {
+    throw new Error('Empty response from Gemini API.');
+  }
+
+  return text.trim();
+}

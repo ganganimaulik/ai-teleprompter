@@ -221,8 +221,8 @@ function scrollFrame(now) {
 
     const silentMs = Date.now() - state.lastSpeechTime;
     
-    // Only creep if speaking and not paused
-    if (state.lastSpeechTime > 0 && silentMs <= CREEP_SILENCE_PAUSE_MS) {
+    // Only creep if speaking, not paused, and not ad-libbing
+    if (state.lastSpeechTime > 0 && silentMs <= CREEP_SILENCE_PAUSE_MS && !state.isAdLibbing) {
       const wordsPerMs = (state.settings.wpm * 0.85) / 60000;
       
       const prevWord = state.words[state.currentWordIndex - 1];
@@ -413,6 +413,34 @@ function setupIpcListeners() {
     if (action === 'load-script') {
       state.settings = data.settings;
       renderScript(data.paragraphs, data.allWords);
+      
+      if (data.currentState) {
+        state.isRecording = data.currentState.isRecording;
+        state.isAdLibbing = data.currentState.isAdLibbing;
+        state.lastSpeechTime = data.currentState.lastSpeechTime;
+        state.shadowIndex = data.currentState.shadowIndex;
+        
+        // sync scroll position without animation
+        snapTo(data.currentState.currentWordIndex, false);
+        
+        // update UI buttons to match recording state
+        if (state.isRecording) {
+          dom.overlayPlayBtn.textContent = '⏸️ Pause';
+          dom.overlayPlayBtn.classList.remove('btn-primary');
+          dom.overlayPlayBtn.classList.add('btn-secondary');
+          dom.overlayContainer.classList.add('listening');
+          startScrollAnim();
+        } else {
+          dom.overlayPlayBtn.textContent = '🎙️ Start';
+          dom.overlayPlayBtn.classList.remove('btn-secondary');
+          dom.overlayPlayBtn.classList.add('btn-primary');
+          dom.overlayContainer.classList.remove('listening');
+        }
+        
+        if (state.isAdLibbing) {
+          dom.overlayContainer.classList.add('ad-libbing');
+        }
+      }
     }
   });
 
@@ -444,6 +472,13 @@ function setupIpcListeners() {
       dom.overlayPlayBtn.classList.remove('btn-secondary');
       dom.overlayPlayBtn.classList.add('btn-primary');
       dom.overlayContainer.classList.remove('listening');
+    }
+    
+    state.isAdLibbing = !!update.isAdLibbing;
+    if (state.isAdLibbing) {
+      dom.overlayContainer.classList.add('ad-libbing');
+    } else {
+      dom.overlayContainer.classList.remove('ad-libbing');
     }
 
     state.creepTargetIndex = update.creepTargetIndex;

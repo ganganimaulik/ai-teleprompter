@@ -70,6 +70,10 @@
         <div class="panel-header">
           <h2 class="panel-title">Presentation Script</h2>
           <div class="btn-group">
+            <button id="aiAssistBtn" class="btn btn-secondary btn-sm" title="AI Script Assistant">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5 5 3Z"/><path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1 1-2.5Z"/></svg>
+              <span>AI Assistant</span>
+            </button>
             <button id="sampleScriptBtn" class="btn btn-secondary btn-sm" title="Load Default Script">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
               <span>Load Sample</span>
@@ -80,7 +84,61 @@
             </button>
           </div>
         </div>
-        <textarea id="scriptInput" placeholder="Paste or type your presentation script here..."></textarea>
+        
+        <div class="editor-workspace">
+          <textarea id="scriptInput" placeholder="Paste or type your presentation script here..."></textarea>
+          
+          <div id="aiAssistantPanel" class="ai-assistant-panel hidden">
+            <div class="ai-panel-section">
+              <label class="settings-label">Gemini API Key</label>
+              <div class="api-key-container">
+                <input type="password" id="geminiApiKey" class="text-input" placeholder="AIzaSy...">
+              </div>
+              <div class="api-key-help">Stored locally in your browser.</div>
+            </div>
+            
+            <div class="ai-panel-section">
+              <label class="settings-label">AI Speech Optimization Options</label>
+              <div class="ai-presets-grid">
+                <label class="ai-preset-btn" title="Rewrite script to sound natural when spoken out loud">
+                  <input type="checkbox" class="ai-preset-checkbox hidden" value="conversational">
+                  <span class="ai-preset-icon">🗣️</span>
+                  <span class="ai-preset-name">Conversational</span>
+                </label>
+                <label class="ai-preset-btn" title="Insert breathing markers (/) at logical pauses">
+                  <input type="checkbox" class="ai-preset-checkbox hidden" value="breaths">
+                  <span class="ai-preset-icon">🫁</span>
+                  <span class="ai-preset-name">Breath Guides</span>
+                </label>
+                <label class="ai-preset-btn" title="Convert numbers ($100 to one hundred) and acronyms to speakable words">
+                  <input type="checkbox" class="ai-preset-checkbox hidden" value="format">
+                  <span class="ai-preset-icon">🔢</span>
+                  <span class="ai-preset-name">Spelled Numbers</span>
+                </label>
+                <label class="ai-preset-btn" title="Condense script, making sentences concise and direct">
+                  <input type="checkbox" class="ai-preset-checkbox hidden" value="shorten">
+                  <span class="ai-preset-icon">✂️</span>
+                  <span class="ai-preset-name">Shorten Text</span>
+                </label>
+              </div>
+            </div>
+            
+            <div class="ai-panel-section" style="flex: 1; display: flex; flex-direction: column;">
+              <label class="settings-label">Custom Instruction / Draft Prompt</label>
+              <textarea id="aiCustomPrompt" class="ai-prompt-input" placeholder="e.g., Rewrite this script to be funny and enthusiastic, or write a new script on how photosynthesis works..."></textarea>
+            </div>
+
+            <div class="ai-actions">
+              <button id="aiRunBtn" class="btn btn-primary" style="width: 100%;">
+                <svg class="ai-spinner hidden" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align: text-top; margin-right: 4px; display: none;"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="62" stroke-dashoffset="15"/></svg>
+                <span>Run AI Writer</span>
+              </button>
+              <button id="aiUndoBtn" class="btn btn-secondary hidden" style="width: 100%; margin-top: 8px;">
+                <span>↩️ Undo AI Edit</span>
+              </button>
+            </div>
+          </div>
+        </div>
         
         <button id="launchOverlayBtn" class="btn btn-primary launcher-btn">
           <svg class="launcher-icon-play" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3"/></svg>
@@ -287,6 +345,146 @@
 
     </div>
 
+  </div>
+
+  <!-- AI Presentation Coach Analytics Modal -->
+  <div id="analyticsModal" class="modal-overlay hidden">
+    <div class="modal-content glass-panel animate-slide-up">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <h2 class="modal-title">Presentation Analytics</h2>
+          <span class="modal-subtitle" id="analyticsSessionDate">Session: June 2, 2026</span>
+        </div>
+        <button id="closeAnalyticsBtn" class="modal-close-btn" title="Close Dashboard">&times;</button>
+      </div>
+      
+      <div class="modal-body">
+        
+        <!-- Score Dashboard Header -->
+        <div class="coach-dashboard-summary">
+          <div class="grade-circle-wrapper">
+            <svg class="grade-svg" viewBox="0 0 36 36">
+              <path class="grade-circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path id="gradeCircleFill" class="grade-circle-fill" stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+            <div class="grade-score" id="coachOverallGrade">A-</div>
+          </div>
+          <div class="coach-summary-text">
+            <h3>Speech Session Complete!</h3>
+            <p id="coachSummarySubtitle">You spoke 142 words over 1m 12s. Here is your coaching report.</p>
+          </div>
+        </div>
+
+        <!-- Metrics Grid -->
+        <div class="coach-stats-grid">
+          <div class="coach-stat-card">
+            <span class="stat-label">Average Pace</span>
+            <div class="stat-val-container">
+              <strong class="stat-val" id="coachAvgWpm">124</strong>
+              <span class="stat-unit">WPM</span>
+            </div>
+            <div class="coach-stat-sub" id="coachPaceDiff">Target: 120 WPM (+3%)</div>
+          </div>
+          
+          <div class="coach-stat-card">
+            <span class="stat-label">Filler Words</span>
+            <div class="stat-val-container">
+              <strong class="stat-val" id="coachFillerCount">5</strong>
+              <span class="stat-unit">spoken</span>
+            </div>
+            <div class="coach-stat-sub">Crutches detected</div>
+          </div>
+
+          <div class="coach-stat-card">
+            <span class="stat-label">Speech Clarity</span>
+            <div class="stat-val-container">
+              <strong class="stat-val" id="coachClarity">92%</strong>
+            </div>
+            <div class="coach-stat-sub">ASR alignment match</div>
+          </div>
+          
+          <div class="coach-stat-card">
+            <span class="stat-label">Time Spoken</span>
+            <div class="stat-val-container">
+              <strong class="stat-val" id="coachDuration">01:12</strong>
+            </div>
+            <div class="coach-stat-sub" id="coachCompletionRate">Read 100% of script</div>
+          </div>
+        </div>
+
+        <!-- Pacing Chart Section -->
+        <div class="coach-chart-section">
+          <span class="settings-label">Pacing Timeline (WPM)</span>
+          <div class="coach-chart-wrapper">
+            <svg id="coachPacingChart" viewBox="0 0 600 160" preserveAspectRatio="none">
+              <!-- Grid Lines -->
+              <line x1="0" y1="40" x2="600" y2="40" stroke="rgba(255,255,255,0.04)" stroke-dasharray="4" />
+              <line x1="0" y1="80" x2="600" y2="80" stroke="rgba(255,255,255,0.04)" stroke-dasharray="4" />
+              <line x1="0" y1="120" x2="600" y2="120" stroke="rgba(255,255,255,0.04)" stroke-dasharray="4" />
+              
+              <!-- Pacing target line -->
+              <line id="chartTargetLine" x1="0" y1="80" x2="600" y2="80" stroke="var(--accent-cyan)" stroke-opacity="0.3" stroke-width="1.5" stroke-dasharray="4 2" />
+              
+              <!-- Pacing path gradient fill -->
+              <path id="chartAreaPath" fill="url(#chartGrad)" d="M 0 160 L 0 80 L 600 80 L 600 160 Z" />
+              <!-- Pacing line -->
+              <path id="chartLinePath" fill="none" stroke="url(#chartLineGrad)" stroke-width="3" stroke-linecap="round" d="M 0 80 L 600 80" />
+              
+              <!-- SVG Definitions for Gradients -->
+              <defs>
+                <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="var(--accent-color)" stop-opacity="0.18" />
+                  <stop offset="100%" stop-color="var(--accent-color)" stop-opacity="0.0" />
+                </linearGradient>
+                <linearGradient id="chartLineGrad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stop-color="var(--accent-color)" />
+                  <stop offset="100%" stop-color="var(--accent-cyan)" />
+                </linearGradient>
+              </defs>
+            </svg>
+            
+            <div class="chart-labels">
+              <span>Start</span>
+              <span id="chartTargetLabel">Target (120 WPM)</span>
+              <span>End</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Two column section: Filler word breakdown & Coach review -->
+        <div class="coach-details-split">
+          
+          <div class="coach-filler-breakdown">
+            <span class="settings-label">Filler Words Breakdown</span>
+            <div id="coachFillerPills" class="filler-pills-list">
+              <!-- Dynamic Pills -->
+              <div class="filler-pill empty">No filler words detected! Outstanding job! 🎉</div>
+            </div>
+          </div>
+
+          <div class="coach-ai-feedback">
+            <span class="settings-label">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-cyan); vertical-align: text-top; margin-right: 3px;"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+              AI Presentation Coach
+            </span>
+            <div class="ai-feedback-box">
+              <p id="coachAiAssessment">Generating personalized speech review and performance tips from AI Coach...</p>
+              <div id="coachAiSpinner" class="ai-coach-spinner hidden">
+                <span class="spinner-dot"></span>
+                <span class="spinner-dot"></span>
+                <span class="spinner-dot"></span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+      
+      <div class="modal-footer">
+        <button id="closeAnalyticsBtn2" class="btn btn-secondary" style="width: 100%;">Close</button>
+      </div>
+    </div>
   </div>
 
   <script type="module" src="control.js"></script>
