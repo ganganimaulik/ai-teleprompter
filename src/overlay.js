@@ -55,6 +55,7 @@ const dom = {
   teleprompterContent:$('teleprompterContent'),
   highlightPill:     $('highlightPill'),
   overlayPlayBtn:    $('overlayPlayBtn'),
+  overlayResetBtn:   $('overlayResetBtn'),
   overlayCloseBtn:   $('overlayCloseBtn')
 };
 
@@ -98,12 +99,16 @@ function renderScript(paragraphs, allWords) {
       span.dataset.id = word.id;
       span.textContent = word.text;
       
-      // Allow clicking on words to seek when overlay is interactive
-      span.onclick = () => {
-        if (state.overlayActive || !window.electronAPI) return;
-        window.electronAPI.controlAction('seek-to-word', word.id);
-      };
-      span.classList.add('interactive'); // Allow interaction/clicking
+      if (word.isBreathGuide) {
+        span.classList.add('breath-guide');
+      } else {
+        // Allow clicking on words to seek when overlay is interactive
+        span.onclick = () => {
+          if (state.overlayActive || !window.electronAPI) return;
+          window.electronAPI.controlAction('seek-to-word', word.id);
+        };
+        span.classList.add('interactive'); // Allow interaction/clicking
+      }
       
       _spanCache[word.id] = span;
       paraDiv.appendChild(span);
@@ -187,8 +192,12 @@ function updateVisualSettings() {
 }
 
 function resetPosition() {
-  state.currentWordIndex = 0;
-  state.creepTargetIndex = 0;
+  let startIdx = 0;
+  while (startIdx < state.wordCount && state.words[startIdx]?.isBreathGuide) {
+    startIdx++;
+  }
+  state.currentWordIndex = startIdx;
+  state.creepTargetIndex = startIdx;
   state.shadowIndex = -1;
   state.lastConfirmedWordIndex = -1;
   state.creepFractional = 0;
@@ -203,7 +212,11 @@ function resetPosition() {
   for (let i = 0; i < _spanCache.length; i++) {
     const span = _spanCache[i];
     if (span) {
-      span.className = 'word interactive';
+      if (state.words[i]?.isBreathGuide) {
+        span.className = 'word breath-guide';
+      } else {
+        span.className = 'word interactive';
+      }
     }
   }
 
@@ -286,8 +299,21 @@ function _applyTransformRaw(ty) {
 }
 
 function moveCreep(idx) {
-  if (idx <= state.currentWordIndex) return;
   if (idx >= state.wordCount) idx = state.wordCount - 1;
+
+  // Skip breath guides
+  while (idx < state.wordCount && state.words[idx]?.isBreathGuide) {
+    idx++;
+  }
+  if (idx >= state.wordCount) {
+    idx = state.wordCount - 1;
+    while (idx >= 0 && state.words[idx]?.isBreathGuide) {
+      idx--;
+    }
+  }
+  if (idx < 0) idx = 0;
+
+  if (idx <= state.currentWordIndex) return;
 
   // Mark words between current index and new index as 'creep' (lighter colored)
   for (let i = state.currentWordIndex; i < idx; i++) {
@@ -304,6 +330,18 @@ function moveCreep(idx) {
 
 function snapTo(globalIdx, smooth) {
   if (globalIdx >= state.wordCount) globalIdx = state.wordCount - 1;
+
+  // Skip breath guides
+  while (globalIdx < state.wordCount && state.words[globalIdx]?.isBreathGuide) {
+    globalIdx++;
+  }
+  if (globalIdx >= state.wordCount) {
+    globalIdx = state.wordCount - 1;
+    while (globalIdx >= 0 && state.words[globalIdx]?.isBreathGuide) {
+      globalIdx--;
+    }
+  }
+  if (globalIdx < 0) globalIdx = 0;
 
   // Reclassify all preceding words as spoken (fully highlighted)
   for (let i = 0; i < globalIdx; i++) {
@@ -535,6 +573,9 @@ function bindButtons() {
     window.electronAPI.controlAction('toggle-pause');
   };
 
+  dom.overlayResetBtn.onclick = () => {
+    window.electronAPI.controlAction('reset-position');
+  };
 
   dom.overlayCloseBtn.onclick = () => {
     window.electronAPI.controlAction('close-overlay');

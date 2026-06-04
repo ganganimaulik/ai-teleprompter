@@ -17,68 +17,75 @@ let overlayWindow = null;
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (controlWindow) {
+      if (controlWindow.isMinimized()) controlWindow.restore();
+      controlWindow.focus();
+    }
+  });
 }
 
 // ═══════════════════════════════════════════════════════
 // LOCAL COOP/COEP HTTP SERVER
 // ═══════════════════════════════════════════════════════
 function startLocalServer() {
-  server = http.createServer((req, res) => {
-    // Basic route mappings
-    let relativePath = req.url.split('?')[0];
-    if (relativePath === '/' || relativePath === '/control') {
-      relativePath = '/control.html';
-    } else if (relativePath === '/overlay') {
-      relativePath = '/overlay.html';
-    }
-
-    const filePath = path.join(__dirname, 'src', relativePath);
-
-    fs.stat(filePath, (err, stats) => {
-      if (err || !stats.isFile()) {
-        res.writeHead(404, { 'Content-Type': 'text/plain' });
-        res.end('404 Not Found');
-        return;
-      }
-
-      // MIME Types mapping
-      const ext = path.extname(filePath).toLowerCase();
-      let contentType = 'text/html';
-      if (ext === '.js') contentType = 'application/javascript';
-      else if (ext === '.css') contentType = 'text/css';
-      else if (ext === '.json') contentType = 'application/json';
-      else if (ext === '.png') contentType = 'image/png';
-      else if (ext === '.svg') contentType = 'image/svg+xml';
-      else if (ext === '.wasm') contentType = 'application/wasm';
-
-      // Set COOP and COEP headers for SharedArrayBuffer
-      res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-      res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
-      res.setHeader('Access-Control-Allow-Origin', '*');
-
-      res.writeHead(200, { 'Content-Type': contentType });
-      fs.createReadStream(filePath).pipe(res);
-    });
-  });
-
   const PREFERRED_PORT = 58273;
 
   return new Promise((resolve) => {
     const tryListen = (port) => {
-      const serverOnError = (err) => {
+      // Create a fresh server instance each time to ensure no state pollution
+      const currentServer = http.createServer((req, res) => {
+        // Basic route mappings
+        let relativePath = req.url.split('?')[0];
+        if (relativePath === '/' || relativePath === '/control') {
+          relativePath = '/control.html';
+        } else if (relativePath === '/overlay') {
+          relativePath = '/overlay.html';
+        }
+
+        const filePath = path.join(__dirname, 'src', relativePath);
+
+        fs.stat(filePath, (err, stats) => {
+          if (err || !stats.isFile()) {
+            res.writeHead(404, { 'Content-Type': 'text/plain' });
+            res.end('404 Not Found');
+            return;
+          }
+
+          // MIME Types mapping
+          const ext = path.extname(filePath).toLowerCase();
+          let contentType = 'text/html';
+          if (ext === '.js') contentType = 'application/javascript';
+          else if (ext === '.css') contentType = 'text/css';
+          else if (ext === '.json') contentType = 'application/json';
+          else if (ext === '.png') contentType = 'image/png';
+          else if (ext === '.svg') contentType = 'image/svg+xml';
+          else if (ext === '.wasm') contentType = 'application/wasm';
+
+          // Set COOP and COEP headers for SharedArrayBuffer
+          res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+          res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+
+          res.writeHead(200, { 'Content-Type': contentType });
+          fs.createReadStream(filePath).pipe(res);
+        });
+      });
+
+      currentServer.once('error', (err) => {
+        currentServer.close();
         if (err.code === 'EADDRINUSE') {
-          console.warn(`Port ${port} in use, trying ${port + 1}...`);
-          tryListen(port + 1);
+          console.warn(`Preferred port ${port} in use. Trying port 0 (OS auto-assign)...`);
+          tryListen(0);
         } else {
           console.error('Server error:', err);
         }
-      };
+      });
 
-      server.once('error', serverOnError);
-
-      server.listen(port, '127.0.0.1', () => {
-        server.removeListener('error', serverOnError);
-        serverPort = port;
+      currentServer.listen(port, '127.0.0.1', () => {
+        server = currentServer;
+        serverPort = currentServer.address().port;
         console.log(`Local web server listening on http://127.0.0.1:${serverPort}`);
         resolve(serverPort);
       });
@@ -152,11 +159,18 @@ function createOverlayWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
+      backgroundThrottling: false,
     },
   });
 
   // Enable Screen Sharing & recording prevention for teleprompter overlay
   overlayWindow.setContentProtection(true);
+
+  // For macOS, ensure it shows above fullscreen apps (like Google Slides in Chrome)
+  if (process.platform === 'darwin') {
+    overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    overlayWindow.setAlwaysOnTop(true, 'screen-saver', 1);
+  }
 
   // Initial mouse passthrough
   overlayWindow.setIgnoreMouseEvents(true, { forward: true });

@@ -125,7 +125,7 @@ const CFG = {
   NUDGE_INTERVAL_MS:       7000,
   WPM_DEFAULT:             120,   
   PARA_COMPLETE_RATIO:     0.55,  
-  PARA_COMPLETE_DELAY:     500,
+  PARA_COMPLETE_DELAY:     2000,
   CREEP_SILENCE_PAUSE_MS:  1000,  
   CREEP_MAX_LOOKAHEAD:     2,     
   LOCALITY_HALVING_DIST:   20,    
@@ -218,6 +218,7 @@ function buildTokenIndex(scriptToks) {
   const idx = new Map();
   for (let i = 0; i < scriptToks.length; i++) {
     const tok = scriptToks[i];
+    if (!tok) continue;
     if (!idx.has(tok)) idx.set(tok, []);
     idx.get(tok).push(i);
   }
@@ -406,8 +407,21 @@ function confirmMove(globalIdx, smooth) {
 }
 
 function snapTo(globalIdx, smooth) {
-  if (globalIdx <= state.currentWordIndex) return;
   if (globalIdx >= state.wordCount) globalIdx = state.wordCount - 1;
+
+  // Skip breath guides
+  while (globalIdx < state.wordCount && state.words[globalIdx]?.isBreathGuide) {
+    globalIdx++;
+  }
+  if (globalIdx >= state.wordCount) {
+    globalIdx = state.wordCount - 1;
+    while (globalIdx >= 0 && state.words[globalIdx]?.isBreathGuide) {
+      globalIdx--;
+    }
+  }
+  if (globalIdx < 0) globalIdx = 0;
+
+  if (globalIdx <= state.currentWordIndex) return;
 
   state.currentWordIndex = globalIdx;
   state.lastAdvanceTime  = Date.now();
@@ -445,6 +459,17 @@ function updateShadowCursor() {
 
 function seekToWord(wordIdx) {
   if (wordIdx < 0 || wordIdx >= state.wordCount) return;
+
+  while (wordIdx < state.wordCount && state.words[wordIdx]?.isBreathGuide) {
+    wordIdx++;
+  }
+  if (wordIdx >= state.wordCount) {
+    wordIdx = state.wordCount - 1;
+    while (wordIdx >= 0 && state.words[wordIdx]?.isBreathGuide) {
+      wordIdx--;
+    }
+  }
+  if (wordIdx < 0) wordIdx = 0;
 
   state.currentWordIndex = wordIdx;
   state.creepTargetIndex = wordIdx;
@@ -488,12 +513,14 @@ function parseScript(text) {
     const startIndex = allWords.length;
     const words = [];
     paraText.split(/\s+/).filter(Boolean).forEach((token, localIdx) => {
+      const isBreath = (token === '/');
       const norm = normalizeWord(token);
-      if (!norm) return;
+      if (!norm && !isBreath) return;
       const word = {
         id: allWords.length, localId: localIdx,
         text: token, normalized: norm,
         normToken: normTok(norm),
+        isBreathGuide: isBreath
       };
       allWords.push(word);
       words.push(word);
@@ -535,7 +562,11 @@ function resetPosition(clearTx = true) {
   if (state.paragraphCompleteTimer) { clearTimeout(state.paragraphCompleteTimer); state.paragraphCompleteTimer = null; }
   if (state.stallNudgeTimer)        { clearTimeout(state.stallNudgeTimer);        state.stallNudgeTimer        = null; }
 
-  state.currentWordIndex = 0;
+  let startIdx = 0;
+  while (startIdx < state.wordCount && state.words[startIdx]?.isBreathGuide) {
+    startIdx++;
+  }
+  state.currentWordIndex = startIdx;
   state.currentParaIndex = 0;
   state.sessionStartTime = null;
   state.lastAdvanceTime  = 0;
@@ -679,33 +710,41 @@ function accumulateTranscript(chunk) {
 }
 
 function checkParaCompletion(acc) {
-  const para = state.paragraphs[state.currentParaIndex];
+  const paraIdx = state.currentParaIndex;
+  const para = state.paragraphs[paraIdx];
   if (!para) return;
 
   const localIdx = state.currentWordIndex - para.startIndex;
-  if (localIdx >= para.words.length - 3) { triggerParaComplete(); return; }
+  if (localIdx >= para.words.length - 3) { triggerParaComplete(paraIdx); return; }
 
   if (localIdx < para.words.length * 0.7) return;
 
-  const lastWords    = para.words.slice(-3).filter(w => w.normalized.length >= 4);
-  if (!lastWords.length) { triggerParaComplete(); return; }
+  const lastWords    = para.words.slice(-3).filter(w => !w.isBreathGuide && w.normalized.length >= 4);
+  if (!lastWords.length) { triggerParaComplete(paraIdx); return; }
 
   const textLower = acc.toLowerCase().replace(/[^a-z0-9äöüæøåéàèêëîïôùûüç' -]/g,' ');
   const matched   = lastWords.filter(w => textLower.includes(w.normalized) || textLower.includes(w.normToken)).length;
   const needed    = Math.max(1, Math.ceil(lastWords.length * CFG.PARA_COMPLETE_RATIO));
-  if (matched >= needed) triggerParaComplete();
+  if (matched >= needed) triggerParaComplete(paraIdx);
 }
 
-function triggerParaComplete() {
+function triggerParaComplete(completedParaIdx) {
   if (state.paragraphCompleteTimer) return;
   state.paragraphCompleteTimer = setTimeout(() => {
     state.paragraphCompleteTimer = null;
-    advancePara();
+    advancePara(completedParaIdx);
   }, CFG.PARA_COMPLETE_DELAY);
 }
 
-function advancePara() {
-  const next = state.currentParaIndex + 1;
+function advancePara(completedParaIdx) {
+  // If the current index has already moved past the completed paragraph index
+  // (e.g. user started speaking the next paragraph during the timeout delay),
+  // we do not need to do anything or trigger script completion.
+  if (state.currentParaIndex > completedParaIdx) {
+    return;
+  }
+
+  const next = completedParaIdx + 1;
   if (next >= state.paragraphs.length) { 
     setStatus('idle','Script complete!'); 
     stopAudio();

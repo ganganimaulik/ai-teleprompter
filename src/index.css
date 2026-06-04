@@ -1769,3 +1769,19 @@ body.light-theme .shortcut-key {
   font-size: 14px;
   color: var(--text-secondary);
 }
+
+/* Premium styling for ASR Breath Guides (inserted as '/' tokens) */
+.word.breath-guide {
+  color: var(--accent-cyan) !important;
+  font-weight: 700;
+  opacity: 0.85;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 0 4px rgba(20, 184, 166, 0.4);
+  margin-left: 2px;
+  margin-right: 2px;
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.word.breath-guide.spoken {
+  color: rgba(20, 184, 166, 0.2) !important;
+  text-shadow: none;
+}
