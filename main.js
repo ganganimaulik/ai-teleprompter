@@ -328,6 +328,12 @@ app.whenReady().then(async () => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createControlWindow();
+    } else {
+      if (controlWindow) {
+        if (controlWindow.isMinimized()) controlWindow.restore();
+        controlWindow.show();
+        controlWindow.focus();
+      }
     }
   });
 });
