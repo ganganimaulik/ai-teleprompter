@@ -6,8 +6,7 @@ async function supportsWebGPU() {
   catch { return false; }
 }
 
-const device = (await supportsWebGPU()) ? 'webgpu' : 'wasm';
-self.postMessage({ type: 'info', message: `Device: ${device}` });
+let device = null;
 
 const DTYPE_CONFIGS = {
   webgpu: { encoder_model: 'fp32', decoder_model_merged: 'q4' },
@@ -32,8 +31,14 @@ async function ensureLocalTranscriber() {
   self.postMessage({ type: 'status', status: 'loading', message: 'Loading local model…' });
   
   try {
+    if (!device) {
+      device = (await supportsWebGPU()) ? 'webgpu' : 'wasm';
+      self.postMessage({ type: 'info', message: `Device: ${device}` });
+    }
+
     if (!pipelineFn) {
       const transformers = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/dist/transformers.min.js');
+      transformers.env.allowLocalModels = false;
       pipelineFn = transformers.pipeline;
     }
     transcriber = await pipelineFn(

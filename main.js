@@ -67,7 +67,7 @@ function startLocalServer() {
 
           // Set COOP and COEP headers for SharedArrayBuffer
           res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-          res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+          res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
           res.setHeader('Access-Control-Allow-Origin', '*');
 
           res.writeHead(200, { 'Content-Type': contentType });
@@ -118,6 +118,12 @@ function createControlWindow() {
   controlWindow.setContentProtection(true);
 
   controlWindow.loadURL(`http://127.0.0.1:${serverPort}/control.html`);
+
+  // Log renderer console messages (including worker logs) to the terminal
+  controlWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    const levelStr = level === 0 ? 'INFO' : level === 1 ? 'WARN' : level === 2 ? 'ERROR' : 'LOG';
+    console.log(`[Renderer ${levelStr}] (${path.basename(sourceId)}:${line}) ${message}`);
+  });
 
   controlWindow.on('closed', () => {
     controlWindow = null;

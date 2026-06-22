@@ -1,7 +1,10 @@
 import {
+  env,
   AutoModel,
   Tensor,
 } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/dist/transformers.min.js';
+
+env.allowLocalModels = false;
 
 const SAMPLE_RATE          = 16000;
 const SPEECH_THRESHOLD     = 0.30;
