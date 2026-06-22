@@ -151,7 +151,7 @@ function createOverlayWindow() {
   const overlayX = Math.round((width - overlayWidth) / 2);
   const overlayY = 40; // near the webcam at the top
 
-  overlayWindow = new BrowserWindow({
+  const overlayOptions = {
     width: overlayWidth,
     height: overlayHeight,
     x: overlayX,
@@ -171,14 +171,23 @@ function createOverlayWindow() {
       preload: path.join(__dirname, 'preload.js'),
       backgroundThrottling: false,
     },
-  });
+  };
+
+  if (process.platform === 'darwin') {
+    overlayOptions.type = 'panel';
+  }
+
+  overlayWindow = new BrowserWindow(overlayOptions);
 
   // Enable Screen Sharing & recording prevention for teleprompter overlay
   overlayWindow.setContentProtection(true);
 
   // For macOS, ensure it shows above fullscreen apps (like Google Slides in Chrome)
   if (process.platform === 'darwin') {
-    overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    overlayWindow.setVisibleOnAllWorkspaces(true, { 
+      visibleOnFullScreen: true,
+      skipTransformProcessType: true
+    });
     overlayWindow.setAlwaysOnTop(true, 'screen-saver', 1);
   }
 
