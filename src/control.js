@@ -110,7 +110,26 @@ const state = {
   modelReady: false,
   modelLoading: false,
   _startPending: false,
-  overlayActive: false
+  overlayActive: false,
+
+  // Adaptive pace tracking
+  pace: {
+    tier: 'normal',         // 'slow' | 'normal' | 'fast' | 'sprint'
+    measuredWpm: 0,         // smoothed measured WPM
+    wpmHistory: [],         // rolling window for trend detection (last 12)
+    lastTierChange: 0,      // timestamp — prevents oscillation
+    adaptiveParams: {       // dynamically computed overrides
+      creepSpeedMult: 0.85,
+      creepMaxLookahead: 2,
+      scrollLerp: 0.09,
+      localityHalvingDist: 20,
+      windowBase: 25,
+      stallMs: 11000,
+      nudgeIntervalMs: 7000,
+      nudgeAdvanceFraction: 0.35,
+      wpmCapMult: 1.4
+    }
+  }
 };
 
 // ═══════════════════════════════════════════════════════
@@ -142,6 +161,69 @@ const CFG = {
   VOCAB_ONSCRIPT_RATIO:    0.70,  // spoken token ratio indicating on-script speech
   VOCAB_OFFSCRIPT_RATIO:   0.30,  // spoken token ratio indicating off-script speech
 };
+
+// ═══════════════════════════════════════════════════════
+// ADAPTIVE PACE TIERS
+// ═══════════════════════════════════════════════════════
+const PACE_TIERS = {
+  slow:   { minWpm: 0,   maxWpm: 90,  creepSpeedMult: 0.75, creepMaxLookahead: 1, scrollLerp: 0.09, localityHalvingDist: 20, windowBase: 25, stallMs: 11000, nudgeIntervalMs: 7000, nudgeAdvanceFraction: 0.35, wpmCapMult: 1.3 },
+  normal: { minWpm: 90,  maxWpm: 150, creepSpeedMult: 0.85, creepMaxLookahead: 2, scrollLerp: 0.09, localityHalvingDist: 20, windowBase: 25, stallMs: 11000, nudgeIntervalMs: 7000, nudgeAdvanceFraction: 0.35, wpmCapMult: 1.4 },
+  fast:   { minWpm: 150, maxWpm: 200, creepSpeedMult: 0.95, creepMaxLookahead: 4, scrollLerp: 0.16, localityHalvingDist: 40, windowBase: 45, stallMs: 7000,  nudgeIntervalMs: 5000, nudgeAdvanceFraction: 0.50, wpmCapMult: 1.8 },
+  sprint: { minWpm: 200, maxWpm: Infinity, creepSpeedMult: 1.0, creepMaxLookahead: 6, scrollLerp: 0.22, localityHalvingDist: 60, windowBase: 60, stallMs: 5000,  nudgeIntervalMs: 3000, nudgeAdvanceFraction: 0.70, wpmCapMult: 2.2 }
+};
+
+// Hysteresis bands — tier transitions require sustained pace for stability
+const PACE_HYSTERESIS_MS = 2000;       // minimum time between tier changes
+const PACE_HISTORY_SIZE  = 12;         // rolling window of WPM samples
+const PACE_UP_MARGIN     = 10;         // WPM above tier max to upgrade
+const PACE_DOWN_MARGIN   = 15;         // WPM below tier min to downgrade
+
+function updatePaceTier() {
+  const now = Date.now();
+  const hist = state.pace.wpmHistory;
+  if (hist.length < 3) return;  // need minimum samples
+
+  // Compute trimmed median of recent WPM samples
+  const sorted = [...hist].sort((a, b) => a - b);
+  const trimmed = sorted.slice(1, -1);  // drop highest and lowest
+  const median = trimmed.length
+    ? trimmed.reduce((s, v) => s + v, 0) / trimmed.length
+    : sorted[Math.floor(sorted.length / 2)];
+
+  state.pace.measuredWpm = Math.round(median);
+
+  // Check hysteresis: don't change tier too rapidly
+  if (now - state.pace.lastTierChange < PACE_HYSTERESIS_MS) return;
+
+  const current = PACE_TIERS[state.pace.tier];
+  let newTier = state.pace.tier;
+
+  // Check upgrade (with margin to prevent oscillation)
+  if (median > current.maxWpm + PACE_UP_MARGIN) {
+    const tiers = ['slow', 'normal', 'fast', 'sprint'];
+    const idx = tiers.indexOf(state.pace.tier);
+    if (idx < tiers.length - 1) newTier = tiers[idx + 1];
+  }
+  // Check downgrade (with margin)
+  else if (median < current.minWpm - PACE_DOWN_MARGIN) {
+    const tiers = ['slow', 'normal', 'fast', 'sprint'];
+    const idx = tiers.indexOf(state.pace.tier);
+    if (idx > 0) newTier = tiers[idx - 1];
+  }
+
+  if (newTier !== state.pace.tier) {
+    state.pace.tier = newTier;
+    state.pace.lastTierChange = now;
+    state.pace.adaptiveParams = { ...PACE_TIERS[newTier] };
+    syncStateToOverlay('snap');
+  }
+}
+
+function adaptiveCfg(key) {
+  return state.pace.adaptiveParams[key] !== undefined
+    ? state.pace.adaptiveParams[key]
+    : CFG[key];
+}
 
 let _txCount = 0;
 
@@ -292,7 +374,7 @@ function ariaMatch(spokenText) {
   const scriptToks = state.scriptNormTokens;
   const curPos     = state.creepTargetIndex;
   const scriptLen  = state.wordCount;
-  const winSize    = Math.max(CFG.WINDOW_BASE, Math.ceil(spoken.length * CFG.WINDOW_MULT));
+  const winSize    = Math.max(adaptiveCfg('windowBase'), Math.ceil(spoken.length * CFG.WINDOW_MULT));
 
   const candidates = getCandidates(spoken, state.tokenIndex, curPos, winSize);
   if (candidates.length === 0) return null;
@@ -309,7 +391,7 @@ function ariaMatch(spokenText) {
     const { score: sc, matchLen } = scoreWindow(spoken, scriptToks, start, slack);
     if (sc <= 0) continue;
 
-    const localityFactor = 1 / (1 + distAhead / CFG.LOCALITY_HALVING_DIST);
+    const localityFactor = 1 / (1 + distAhead / adaptiveCfg('localityHalvingDist'));
     const adjustedScore  = sc * localityFactor;
 
     if (adjustedScore > bestScore) {
@@ -454,13 +536,19 @@ function recordAnchor(newIdx) {
     const ms    = now - state.lastAnchorTime;
     if (ms > 400) {
       const wpm = words / (ms / 60000);
-      const capHi = state.settings.wpm * 1.4;
+      // Dynamic WPM cap based on current pace tier
+      const capHi = state.settings.wpm * adaptiveCfg('wpmCapMult');
       if (wpm > 40 && wpm <= capHi) {
         state.wpmSamples.push(wpm);
         if (state.wpmSamples.length > 8) state.wpmSamples.shift();
         const sorted = [...state.wpmSamples].sort((a,b)=>a-b);
         const trim   = sorted.slice(1, -1);
         state.anchorWpm = trim.length ? trim.reduce((s,v)=>s+v,0)/trim.length : sorted[0];
+
+        // Feed into pace history for tier tracking
+        state.pace.wpmHistory.push(wpm);
+        if (state.pace.wpmHistory.length > PACE_HISTORY_SIZE) state.pace.wpmHistory.shift();
+        updatePaceTier();
       }
     }
   }
@@ -673,6 +761,13 @@ function resetPosition(clearTx = true) {
   state.consecutiveLowScores = 0;
   state.matchConfidence   = 0.5;
   _txCount               = 0;
+
+  // Reset adaptive pace tracking
+  state.pace.tier = 'normal';
+  state.pace.measuredWpm = 0;
+  state.pace.wpmHistory = [];
+  state.pace.lastTierChange = 0;
+  state.pace.adaptiveParams = { ...PACE_TIERS.normal };
 
   if (clearTx) { 
     state.accumulatedText = ''; 
@@ -949,15 +1044,17 @@ function updateParaForPos(idx) {
 
 function scheduleStallNudge() {
   if (state.stallNudgeTimer) clearTimeout(state.stallNudgeTimer);
+  const adaptiveStallMs = adaptiveCfg('stallMs');
   state.stallNudgeTimer = setTimeout(function nudge() {
     if (!state.isRecording) return;
     const stalledMs = Date.now() - state.lastAdvanceTime;
-    if (stalledMs >= CFG.STALL_MS) {
+    if (stalledMs >= adaptiveStallMs) {
       const speechRecency  = Date.now() - state.lastSpeechTime;
       const userIsSpeaking = state.lastSpeechTime > 0 && speechRecency < 5000;
       if (userIsSpeaking && !state.isAdLibbing) {
         const wpm    = effectiveWpm();
-        const words  = Math.max(1, Math.round(wpm * (stalledMs / 60000) * 0.35));
+        const advanceFraction = adaptiveCfg('nudgeAdvanceFraction');
+        const words  = Math.max(1, Math.round(wpm * (stalledMs / 60000) * advanceFraction));
         const target = Math.min(state.currentWordIndex + words, state.wordCount - 1);
         if (target > state.currentWordIndex) {
           moveTo(target, true);
@@ -965,8 +1062,8 @@ function scheduleStallNudge() {
         }
       }
     }
-    state.stallNudgeTimer = setTimeout(nudge, CFG.NUDGE_INTERVAL_MS);
-  }, CFG.STALL_MS);
+    state.stallNudgeTimer = setTimeout(nudge, adaptiveCfg('nudgeIntervalMs'));
+  }, adaptiveStallMs);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -987,6 +1084,11 @@ function syncStateToOverlay(scrollMode = 'snap') {
     wpm: state.settings.wpm,
     fontSize: state.settings.fontSize,
     mirror: state.settings.mirror,
+    
+    // Adaptive pace parameters for overlay
+    creepSpeedMult: adaptiveCfg('creepSpeedMult'),
+    creepMaxLookahead: adaptiveCfg('creepMaxLookahead'),
+    scrollLerp: adaptiveCfg('scrollLerp'),
     
     // Visual styles
     overlayTheme: state.settings.overlayTheme,
@@ -1415,6 +1517,7 @@ const dom = {
   clearScriptBtn:   $('clearScriptBtn'),
   sampleScriptBtn:  $('sampleScriptBtn'),
   wpmValue:         $('wpmValue'),
+  paceTierBadge:    $('paceTierBadge'),
   progressValue:    $('progressValue'),
   etaValue:         $('etaValue'),
   fontSizeRange:    $('fontSizeRange'),
@@ -1488,6 +1591,14 @@ function updateWPM() {
     ? Math.round(state.anchorWpm)
     : Math.round(state.currentWordIndex / ((Date.now() - state.sessionStartTime) / 60000));
   if (dom.wpmValue) dom.wpmValue.textContent = wpm || '—';
+
+  // Update pace tier badge
+  if (dom.paceTierBadge) {
+    const tierLabels = { slow: 'Slow', normal: 'Normal', fast: 'Fast', sprint: 'Sprint' };
+    dom.paceTierBadge.dataset.tier = state.pace.tier;
+    const label = dom.paceTierBadge.querySelector('.pace-tier-label');
+    if (label) label.textContent = tierLabels[state.pace.tier] || 'Normal';
+  }
 }
 
 function updateProgress() {

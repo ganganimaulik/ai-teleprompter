@@ -397,6 +397,86 @@ body.light-theme .sidebar-stats-stack .stat-card {
 }
 
 /* ═══════════════════════════════════════════════════════
+   PACE TIER INDICATOR
+   ═══════════════════════════════════════════════════════ */
+.pace-tier-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.pace-tier-badge .pace-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  transition: background 0.4s ease;
+}
+
+.pace-tier-badge[data-tier="slow"] {
+  background: rgba(96, 165, 250, 0.15);
+  color: #60a5fa;
+}
+.pace-tier-badge[data-tier="slow"] .pace-dot {
+  background: #60a5fa;
+}
+
+.pace-tier-badge[data-tier="normal"] {
+  background: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+}
+.pace-tier-badge[data-tier="normal"] .pace-dot {
+  background: #34d399;
+}
+
+.pace-tier-badge[data-tier="fast"] {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+}
+.pace-tier-badge[data-tier="fast"] .pace-dot {
+  background: #fbbf24;
+}
+
+.pace-tier-badge[data-tier="sprint"] {
+  background: rgba(251, 113, 133, 0.15);
+  color: #fb7185;
+  animation: sprint-pulse 1.5s ease-in-out infinite;
+}
+.pace-tier-badge[data-tier="sprint"] .pace-dot {
+  background: #fb7185;
+}
+
+@keyframes sprint-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.light-theme .pace-tier-badge[data-tier="slow"] {
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+}
+.light-theme .pace-tier-badge[data-tier="normal"] {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+.light-theme .pace-tier-badge[data-tier="fast"] {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+}
+.light-theme .pace-tier-badge[data-tier="sprint"] {
+  background: rgba(244, 63, 94, 0.12);
+  color: #f43f5e;
+}
+
+/* ═══════════════════════════════════════════════════════
    PRESENTATION SCRIPT EDITOR PANEL
    ═══════════════════════════════════════════════════════ */
 .panel-editor {

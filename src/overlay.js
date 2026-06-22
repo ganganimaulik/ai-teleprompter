@@ -30,7 +30,12 @@ const state = {
   
   // Creep animation variables
   creepFractional: 0,
-  creepLastTime: 0
+  creepLastTime: 0,
+
+  // Adaptive pace parameters (received from control panel)
+  adaptiveCreepSpeedMult: 0.85,
+  adaptiveCreepMaxLookahead: 2,
+  adaptiveScrollLerp: 0.09
 };
 
 // Algorithmic Constants
@@ -245,7 +250,7 @@ function scrollFrame(now) {
     
     // Only creep if speaking, not paused, and not ad-libbing
     if (state.lastSpeechTime > 0 && silentMs <= CREEP_SILENCE_PAUSE_MS && !state.isAdLibbing) {
-      const wordsPerMs = (state.settings.wpm * 0.85) / 60000;
+      const wordsPerMs = (state.settings.wpm * state.adaptiveCreepSpeedMult) / 60000;
       
       const prevWord = state.words[state.currentWordIndex - 1];
       const prevText = prevWord ? prevWord.text : '';
@@ -258,7 +263,7 @@ function scrollFrame(now) {
         const steps = Math.floor(state.creepFractional);
         state.creepFractional -= steps;
 
-        const maxCreep = state.creepTargetIndex + CREEP_MAX_LOOKAHEAD;
+        const maxCreep = state.creepTargetIndex + state.adaptiveCreepMaxLookahead;
         const target = Math.min(state.currentWordIndex + steps, maxCreep, state.wordCount - 1);
 
         if (target > state.currentWordIndex) {
@@ -285,7 +290,7 @@ function scrollFrame(now) {
       return;
     }
   } else {
-    _scrollCurrent += diff * SCROLL_LERP;
+    _scrollCurrent += diff * state.adaptiveScrollLerp;
     _applyTransformRaw(_scrollCurrent);
   }
 
@@ -497,6 +502,11 @@ function setupIpcListeners() {
     state.settings.fontSize = update.fontSize;
     state.settings.mirror = update.mirror;
     state.lastSpeechTime = update.lastSpeechTime;
+
+    // Adaptive pace parameters
+    if (update.creepSpeedMult !== undefined) state.adaptiveCreepSpeedMult = update.creepSpeedMult;
+    if (update.creepMaxLookahead !== undefined) state.adaptiveCreepMaxLookahead = update.creepMaxLookahead;
+    if (update.scrollLerp !== undefined) state.adaptiveScrollLerp = update.scrollLerp;
     
     state.settings.overlayTheme = update.overlayTheme;
     state.settings.overlayHighlight = update.overlayHighlight;
