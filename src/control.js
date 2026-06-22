@@ -81,6 +81,7 @@ const state = {
   lastSpeechTime: 0,
   isAdLibbing: false,
   consecutiveLowScores: 0,
+  matchConfidence: 0.5,        // EMA of match quality (0..1)
 
   settings: { 
     fontSize: 2.8, 
@@ -134,6 +135,11 @@ const CFG = {
   FAR_JUMP_MAX_DIST:       20,    
   ADLIB_ENTRY_COUNT:       3,     // consecutive low-score transcripts to enter ad-lib mode
   RELOCK_THRESHOLD:        0.45,  // rawScore needed to exit ad-lib mode and resume tracking
+  CONFIDENCE_ALPHA:        0.35,  // EMA smoothing factor for match confidence
+  CONFIDENCE_ADLIB_ENTER:  0.20,  // EMA below this → enter ad-lib mode
+  CONFIDENCE_ADLIB_EXIT:   0.40,  // EMA above this → exit ad-lib mode
+  VOCAB_ONSCRIPT_RATIO:    0.70,  // spoken token ratio indicating on-script speech
+  VOCAB_OFFSCRIPT_RATIO:   0.30,  // spoken token ratio indicating off-script speech
 };
 
 let _txCount = 0;
@@ -322,6 +328,87 @@ function ariaMatch(spokenText) {
   return best;
 }
 
+// ═══════════════════════════════════════════════════════
+// AI-POWERED OFF-SCRIPT DETECTION HELPERS
+// ═══════════════════════════════════════════════════════
+function computeVocabRatio(spokenText) {
+  if (!spokenText?.trim() || !state.tokenIndex) return 0;
+  const tokens = tokenize(spokenText);
+  if (tokens.length === 0) return 0;
+  const inScript = tokens.filter(t => state.tokenIndex.has(t)).length;
+  return inScript / tokens.length;
+}
+
+function getCandidatesFullScript(spoken, tokenIdx, scriptLen) {
+  const candidates = new Set();
+  for (const tok of spoken) {
+    const positions = tokenIdx.get(tok);
+    if (!positions) continue;
+    for (const base of positions) {
+      for (let d = -2; d <= 1; d++) {
+        const c = base + d;
+        if (c >= 0 && c < scriptLen) candidates.add(c);
+      }
+    }
+  }
+  return Int32Array.from(candidates).sort();
+}
+
+function ariaMatchFullScript(spokenText) {
+  if (!spokenText?.trim() || !state.words.length) return null;
+
+  let spoken = tokenize(spokenText);
+  if (spoken.length === 0) return null;
+
+  // Collapse consecutive duplicates
+  const deduped = [spoken[0]];
+  for (let i = 1; i < spoken.length; i++) {
+    if (spoken[i] !== spoken[i - 1]) deduped.push(spoken[i]);
+  }
+
+  // Filter phantom/ASR noise
+  const cleaned = deduped.filter(t => state.tokenIndex.has(t));
+  spoken = cleaned.length >= 2 ? cleaned : deduped;
+  if (spoken.length === 0) return null;
+
+  const scriptToks = state.scriptNormTokens;
+  const scriptLen  = state.wordCount;
+
+  const candidates = getCandidatesFullScript(spoken, state.tokenIndex, scriptLen);
+  if (candidates.length === 0) return null;
+
+  let best = null;
+  let bestScore = CFG.ACCEPT_THRESHOLD - 0.01;
+  const slack = Math.min(2, Math.ceil(spoken.length * 0.25));
+
+  for (const start of candidates) {
+    if (start >= scriptLen) continue;
+
+    const { score: sc, matchLen } = scoreWindow(spoken, scriptToks, start, slack);
+    if (sc <= 0) continue;
+
+    // Soft locality: gently prefer nearby positions, but allow distant re-locks
+    const distFromCurrent = Math.abs(start - state.creepTargetIndex);
+    const localityFactor  = 1 / (1 + distFromCurrent / (CFG.LOCALITY_HALVING_DIST * 5));
+    const adjustedScore   = sc * localityFactor;
+
+    if (adjustedScore > bestScore) {
+      bestScore = adjustedScore;
+      const dest = Math.min(start + matchLen, scriptLen - 1);
+      best = {
+        globalIdx: dest,
+        score: adjustedScore,
+        rawScore: sc,
+        startPos: start,
+        isAnchor: adjustedScore >= CFG.ANCHOR_THRESHOLD
+      };
+      if (sc >= 0.98) break;
+    }
+  }
+
+  return best;
+}
+
 function updateBeam(matchResult) {
   if (!matchResult) {
     state.hypotheses = state.hypotheses
@@ -479,6 +566,7 @@ function seekToWord(wordIdx) {
   state.lastAdvanceTime = Date.now();
   state.isAdLibbing = false;
   state.consecutiveLowScores = 0;
+  state.matchConfidence = 0.5;
 
   state.hypotheses        = [];
   state.accumulatedText   = '';
@@ -582,6 +670,7 @@ function resetPosition(clearTx = true) {
   state.lastSpeechTime   = 0;
   state.isAdLibbing      = false;
   state.consecutiveLowScores = 0;
+  state.matchConfidence   = 0.5;
   _txCount               = 0;
 
   if (clearTx) { 
@@ -634,21 +723,56 @@ function processTranscript(chunk, isFinal) {
   const acc = isFinal ? accumulateTranscript(chunk) : (state.accumulatedText ? state.accumulatedText + ' ' + chunk : chunk);
   if (isFinal) state.recognitionBuffer = [...state.recognitionBuffer, chunk].slice(-8);
 
-  // ── Run 4 ARIA matches (all synchronous but fast) ──────────────────────
-  const m1 = ariaMatch(chunk);                                    // new chunk only
-  const m2 = state.recognitionBuffer.length >= 2
-    ? ariaMatch(state.recognitionBuffer.slice(-3).join(' '))      // recent buffer
-    : null;
-  const m3 = isFinal ? ariaMatch(acc) : null;                    // full accumulated (final only)
-  
-  const accTail = acc ? acc.split(/\s+/).slice(-12).join(' ') : null;
-  const m4 = (accTail && accTail !== chunk && accTail !== acc) ? ariaMatch(accTail) : null;
+  // ── Vocab ratio quick-check ──────────────────────────────────────────────
+  const vocabRatio = computeVocabRatio(chunk);
+
+  // ── Run ARIA matches ────────────────────────────────────────────────────
+  let m1, m2, m3, m4;
+
+  if (state.isAdLibbing) {
+    // During ad-lib: use full-script search when vocab suggests on-script,
+    // skip expensive matching when clearly off-script
+    if (vocabRatio >= CFG.VOCAB_OFFSCRIPT_RATIO) {
+      const matchFn = vocabRatio >= CFG.VOCAB_ONSCRIPT_RATIO
+        ? ariaMatchFullScript   // high vocab overlap → search entire script
+        : ariaMatch;            // borderline → normal windowed search
+      m1 = matchFn(chunk);
+      m2 = state.recognitionBuffer.length >= 2
+        ? matchFn(state.recognitionBuffer.slice(-3).join(' '))
+        : null;
+    } else {
+      // Clearly off-script — skip expensive matching entirely
+      m1 = null;
+      m2 = null;
+    }
+    m3 = null;
+    m4 = null;
+  } else {
+    // Normal tracking: existing 4-way match
+    m1 = ariaMatch(chunk);
+    m2 = state.recognitionBuffer.length >= 2
+      ? ariaMatch(state.recognitionBuffer.slice(-3).join(' '))
+      : null;
+    m3 = isFinal ? ariaMatch(acc) : null;
+    const accTail = acc ? acc.split(/\s+/).slice(-12).join(' ') : null;
+    m4 = (accTail && accTail !== chunk && accTail !== acc) ? ariaMatch(accTail) : null;
+  }
 
   // Pick best
   let best = null;
   const matchers = [m1, m2, m3, m4];
   for (const m of matchers) {
     if (m && (!best || m.score > best.score)) { best = m; }
+  }
+
+  // ── Update confidence EMA ───────────────────────────────────────────────
+  const rawScoreNow = best ? (best.rawScore || best.score) : 0;
+  state.matchConfidence = CFG.CONFIDENCE_ALPHA * rawScoreNow
+                        + (1 - CFG.CONFIDENCE_ALPHA) * state.matchConfidence;
+
+  // Boost confidence when vocab ratio strongly indicates on-script speech
+  if (vocabRatio >= CFG.VOCAB_ONSCRIPT_RATIO && best) {
+    state.matchConfidence = Math.min(1, state.matchConfidence * 1.15);
   }
 
   if (best && state.performanceData.isActive) {
@@ -658,14 +782,38 @@ function processTranscript(chunk, isFinal) {
   // ── Update beam ──
   const hyp = updateBeam(best);
 
-  // ── Advance if beam converged ──
-  if (hyp && hyp.pos > state.currentWordIndex) {
-    // If ad-libbing, require a strong re-lock match before resuming tracking
-    if (state.isAdLibbing && (!best || (best.rawScore || best.score) < CFG.RELOCK_THRESHOLD)) {
-      // Weak/spurious match while ad-libbing — ignore it, stay frozen
-      return;
-    }
+  // ── Advance / re-lock / enter ad-lib ────────────────────────────────────
+  if (state.isAdLibbing) {
+    // AD-LIB MODE: only re-lock on a strong, confirmed match
+    const relockScore = best ? (best.rawScore || best.score) : 0;
+    const relockOk    = relockScore >= CFG.RELOCK_THRESHOLD
+                     && state.matchConfidence >= CFG.CONFIDENCE_ADLIB_EXIT;
 
+    if (best && relockOk) {
+      // Strong match found — re-lock (may be forward OR backward in script)
+      const target = Math.min(best.globalIdx, state.wordCount - 1);
+      const jumpTo = Math.max(0, best.startPos);
+
+      // Allow backward jumps via seekToWord when re-locking behind current pos
+      if (jumpTo < state.currentWordIndex) {
+        seekToWord(jumpTo);
+      } else {
+        confirmMove(target, isFinal);
+        state.creepTargetIndex = target;
+      }
+
+      updateParaForPos(target);
+      if (best.isAnchor) recordAnchor(target);
+      scheduleStallNudge();
+
+      state.isAdLibbing = false;
+      state.consecutiveLowScores = 0;
+      syncStateToOverlay('snap');
+    }
+    // else: stay frozen — user is still off-script
+
+  } else if (hyp && hyp.pos > state.currentWordIndex) {
+    // NORMAL TRACKING: advance to best hypothesis
     const target = Math.min(hyp.pos, state.wordCount - 1);
 
     confirmMove(target, isFinal);
@@ -675,26 +823,30 @@ function processTranscript(chunk, isFinal) {
 
     scheduleStallNudge();
     state.creepTargetIndex = target;
-
     state.consecutiveLowScores = 0;
-    if (state.isAdLibbing) {
-      state.isAdLibbing = false;
-      syncStateToOverlay('snap');
-    }
+
   } else {
+    // NO MATCH — check if we should enter ad-lib mode
     state.consecutiveLowScores++;
-    if (state.consecutiveLowScores >= CFG.ADLIB_ENTRY_COUNT && !state.isAdLibbing) {
-      state.isAdLibbing = true;
 
-      // Clear accumulated transcript state so re-locking isn't poisoned
-      // by off-script words when the user returns to the script
-      state.accumulatedText   = '';
-      state.lastChunk         = '';
-      state.startingWord      = '';
-      state.recognitionBuffer = [];
-      state.hypotheses        = [];
+    if (!state.isAdLibbing) {
+      const enterViaCounter = state.consecutiveLowScores >= CFG.ADLIB_ENTRY_COUNT;
+      const enterViaEMA     = state.matchConfidence < CFG.CONFIDENCE_ADLIB_ENTER && _txCount > 5;
+      const enterViaVocab   = vocabRatio < CFG.VOCAB_OFFSCRIPT_RATIO
+                           && state.consecutiveLowScores >= 2;
 
-      syncStateToOverlay();
+      if (enterViaCounter || enterViaEMA || enterViaVocab) {
+        state.isAdLibbing = true;
+
+        // Clear accumulated state so re-locking isn't poisoned by off-script words
+        state.accumulatedText   = '';
+        state.lastChunk         = '';
+        state.startingWord      = '';
+        state.recognitionBuffer = [];
+        state.hypotheses        = [];
+
+        syncStateToOverlay();
+      }
     }
   }
 
