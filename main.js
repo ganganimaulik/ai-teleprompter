@@ -454,6 +454,20 @@ app.whenReady().then(async () => {
     }
   });
 
+  // Option+-: Decrease overlay opacity
+  globalShortcut.register('Option+-', () => {
+    if (controlWindow && !controlWindow.isDestroyed()) {
+      controlWindow.webContents.send('hotkey-triggered', 'opacity-down');
+    }
+  });
+
+  // Option+=: Increase overlay opacity
+  globalShortcut.register('Option+=', () => {
+    if (controlWindow && !controlWindow.isDestroyed()) {
+      controlWindow.webContents.send('hotkey-triggered', 'opacity-up');
+    }
+  });
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createControlWindow();

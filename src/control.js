@@ -2371,6 +2371,22 @@ function setupIpcListeners() {
       state.settings.overlayFaded = !state.settings.overlayFaded;
       syncStateToOverlay('instant');
       savePersistedSettings();
+    } else if (hotkey === 'opacity-down') {
+      let currentOpacity = state.settings.overlayOpacity !== undefined ? state.settings.overlayOpacity : 20;
+      let val = Math.max(0, currentOpacity - 5);
+      if (dom.overlayOpacityRange) dom.overlayOpacityRange.value = val;
+      if (dom.overlayOpacityVal) dom.overlayOpacityVal.textContent = `${val}%`;
+      state.settings.overlayOpacity = val;
+      syncStateToOverlay('instant');
+      savePersistedSettings();
+    } else if (hotkey === 'opacity-up') {
+      let currentOpacity = state.settings.overlayOpacity !== undefined ? state.settings.overlayOpacity : 20;
+      let val = Math.min(100, currentOpacity + 5);
+      if (dom.overlayOpacityRange) dom.overlayOpacityRange.value = val;
+      if (dom.overlayOpacityVal) dom.overlayOpacityVal.textContent = `${val}%`;
+      state.settings.overlayOpacity = val;
+      syncStateToOverlay('instant');
+      savePersistedSettings();
     }
   });
 
