@@ -132,6 +132,8 @@ const CFG = {
   SEARCH_LOOKBACK:         11,    
   FAR_JUMP_MIN_TOKENS:     2,     
   FAR_JUMP_MAX_DIST:       20,    
+  ADLIB_ENTRY_COUNT:       3,     // consecutive low-score transcripts to enter ad-lib mode
+  RELOCK_THRESHOLD:        0.45,  // rawScore needed to exit ad-lib mode and resume tracking
 };
 
 let _txCount = 0;
@@ -658,6 +660,12 @@ function processTranscript(chunk, isFinal) {
 
   // ── Advance if beam converged ──
   if (hyp && hyp.pos > state.currentWordIndex) {
+    // If ad-libbing, require a strong re-lock match before resuming tracking
+    if (state.isAdLibbing && (!best || (best.rawScore || best.score) < CFG.RELOCK_THRESHOLD)) {
+      // Weak/spurious match while ad-libbing — ignore it, stay frozen
+      return;
+    }
+
     const target = Math.min(hyp.pos, state.wordCount - 1);
 
     confirmMove(target, isFinal);
@@ -675,8 +683,17 @@ function processTranscript(chunk, isFinal) {
     }
   } else {
     state.consecutiveLowScores++;
-    if (state.consecutiveLowScores >= 2 && !state.isAdLibbing) {
+    if (state.consecutiveLowScores >= CFG.ADLIB_ENTRY_COUNT && !state.isAdLibbing) {
       state.isAdLibbing = true;
+
+      // Clear accumulated transcript state so re-locking isn't poisoned
+      // by off-script words when the user returns to the script
+      state.accumulatedText   = '';
+      state.lastChunk         = '';
+      state.startingWord      = '';
+      state.recognitionBuffer = [];
+      state.hypotheses        = [];
+
       syncStateToOverlay();
     }
   }
