@@ -1984,6 +1984,10 @@ function bindEvents() {
       dom.launchOverlayBtn.classList.remove('btn-primary');
       dom.launchOverlayBtn.classList.add('btn-danger');
       
+      // Ensure overlay starts visible when manually launched
+      state.settings.overlayHidden = false;
+      savePersistedSettings();
+      
       window.electronAPI.controlAction('open-overlay', {
         paragraphs,
         allWords,
@@ -2362,9 +2366,11 @@ function setupIpcListeners() {
     } else if (hotkey === 'toggle-visibility') {
       state.settings.overlayHidden = !state.settings.overlayHidden;
       syncStateToOverlay('instant');
+      savePersistedSettings();
     } else if (hotkey === 'toggle-opacity') {
       state.settings.overlayFaded = !state.settings.overlayFaded;
       syncStateToOverlay('instant');
+      savePersistedSettings();
     }
   });
 

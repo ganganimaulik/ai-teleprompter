@@ -138,7 +138,7 @@ function createControlWindow() {
 
 function createOverlayWindow() {
   if (overlayWindow) {
-    overlayWindow.show();
+    overlayWindow.showInactive();
     return;
   }
 
@@ -158,6 +158,8 @@ function createOverlayWindow() {
     y: overlayY,
     frame: false,
     transparent: true,
+    backgroundColor: '#00000000', // fully transparent to prevent white flash
+    show: false, // hidden initially until ready-to-show
     alwaysOnTop: true,
     hasShadow: false,
     resizable: true,
@@ -184,6 +186,10 @@ function createOverlayWindow() {
   overlayWindow.setIgnoreMouseEvents(true, { forward: true });
 
   overlayWindow.loadURL(`http://127.0.0.1:${serverPort}/overlay.html`);
+
+  overlayWindow.once('ready-to-show', () => {
+    overlayWindow.showInactive();
+  });
 
   overlayWindow.on('closed', () => {
     overlayWindow = null;
