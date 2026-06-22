@@ -97,7 +97,8 @@ const state = {
     overlayOpacity: 20,
     overlayBlur: 8,
     overlayHidden: false,
-    overlayFaded: false
+    overlayFaded: false,
+    audioDeviceId: ''
   },
   
   vadWorker: null,    
@@ -1143,10 +1144,54 @@ class VADProcessor extends AudioWorkletProcessor {
 registerProcessor('vad-processor', VADProcessor);
 `;
 
-async function startAudio() {
-  if (state.isRecording) return;
-  
-  // Request system level permission (Electron level check)
+// ═══════════════════════════════════════════════════════
+// MICROPHONE SELECTION & PRE-FLIGHT TEST
+// ═══════════════════════════════════════════════════════
+let micTestStream = null;
+let micTestAudioContext = null;
+let micTestAnalyser = null;
+let micTestRafId = null;
+
+async function populateMicDevices() {
+  const micSelect = dom.micDeviceSelect;
+  if (!micSelect) return;
+
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const audioInputs = devices.filter(device => device.kind === 'audioinput');
+    const currentSelection = state.settings.audioDeviceId || '';
+
+    micSelect.innerHTML = '';
+    
+    // Default option
+    const defaultOpt = document.createElement('option');
+    defaultOpt.value = '';
+    defaultOpt.textContent = 'Default System Microphone';
+    micSelect.appendChild(defaultOpt);
+
+    audioInputs.forEach(device => {
+      const opt = document.createElement('option');
+      opt.value = device.deviceId;
+      opt.textContent = device.label || `Microphone (${device.deviceId.slice(0, 5)}...)`;
+      micSelect.appendChild(opt);
+    });
+
+    micSelect.value = currentSelection;
+  } catch (err) {
+    console.error('Error listing microphone devices:', err);
+  }
+}
+
+async function startMicTest() {
+  const testBtn = dom.micTestBtn;
+  const levelBar = dom.micLevelMeterBar;
+  if (!testBtn || !levelBar) return;
+
+  if (micTestStream) {
+    stopMicTest();
+    return;
+  }
+
   const isMicGranted = await window.electronAPI.requestMicrophone();
   if (!isMicGranted) {
     setStatus('idle', 'Microphone permission denied on macOS.');
@@ -1154,9 +1199,120 @@ async function startAudio() {
   }
 
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-    });
+    testBtn.textContent = 'Stop Test';
+    testBtn.classList.remove('btn-secondary');
+    testBtn.classList.add('btn-danger');
+
+    const constraints = {
+      echoCancellation: true,
+      noiseSuppression: true
+    };
+    if (state.settings.audioDeviceId) {
+      constraints.deviceId = { exact: state.settings.audioDeviceId };
+    }
+
+    try {
+      micTestStream = await navigator.mediaDevices.getUserMedia({ audio: constraints });
+    } catch (e) {
+      console.warn('Failed to start test with selected device, falling back to default:', e);
+      micTestStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    }
+
+    populateMicDevices();
+
+    micTestAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const source = micTestAudioContext.createMediaStreamSource(micTestStream);
+    micTestAnalyser = micTestAudioContext.createAnalyser();
+    micTestAnalyser.fftSize = 256;
+    source.connect(micTestAnalyser);
+
+    const bufferLength = micTestAnalyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    const draw = () => {
+      if (!micTestStream) return;
+      micTestRafId = requestAnimationFrame(draw);
+      
+      micTestAnalyser.getByteFrequencyData(dataArray);
+      
+      let total = 0;
+      for (let i = 0; i < bufferLength; i++) {
+        total += dataArray[i];
+      }
+      const average = total / bufferLength;
+      const percentage = Math.min(100, Math.round((average / 110) * 100));
+      levelBar.style.width = `${percentage}%`;
+    };
+    draw();
+
+  } catch (err) {
+    console.error('Mic test error:', err);
+    stopMicTest();
+  }
+}
+
+function stopMicTest() {
+  const testBtn = dom.micTestBtn;
+  const levelBar = dom.micLevelMeterBar;
+  if (testBtn) {
+    testBtn.textContent = 'Test Mic';
+    testBtn.classList.remove('btn-danger');
+    testBtn.classList.add('btn-secondary');
+  }
+  if (levelBar) {
+    levelBar.style.width = '0%';
+  }
+
+  if (micTestRafId) {
+    cancelAnimationFrame(micTestRafId);
+    micTestRafId = null;
+  }
+  if (micTestAnalyser) {
+    micTestAnalyser = null;
+  }
+  if (micTestStream) {
+    micTestStream.getTracks().forEach(t => t.stop());
+    micTestStream = null;
+  }
+  if (micTestAudioContext) {
+    micTestAudioContext.close().catch(() => {});
+    micTestAudioContext = null;
+  }
+}
+
+async function startAudio() {
+  if (state.isRecording) return;
+
+  stopMicTest();
+  
+  const isMicGranted = await window.electronAPI.requestMicrophone();
+  if (!isMicGranted) {
+    setStatus('idle', 'Microphone permission denied on macOS.');
+    return;
+  }
+
+  try {
+    let stream;
+    const constraints = {
+      sampleRate: 16000,
+      channelCount: 1,
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true
+    };
+    
+    if (state.settings.audioDeviceId) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: { ...constraints, deviceId: { exact: state.settings.audioDeviceId } }
+        });
+      } catch (e) {
+        console.warn('Failed to open selected audio device, falling back to default:', e);
+        stream = await navigator.mediaDevices.getUserMedia({ audio: constraints });
+      }
+    } else {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: constraints });
+    }
     state.micStream = stream;
 
     state.audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
@@ -1287,7 +1443,10 @@ const dom = {
   overlayOpacityGroup:    $('overlayOpacityGroup'),
   overlayBlurRange:       $('overlayBlurRange'),
   overlayBlurVal:         $('overlayBlurVal'),
-  overlayBlurGroup:       $('overlayBlurGroup')
+  overlayBlurGroup:       $('overlayBlurGroup'),
+  micDeviceSelect:        $('micDeviceSelect'),
+  micTestBtn:             $('micTestBtn'),
+  micLevelMeterBar:       $('micLevelMeterBar')
 };
 
 function setStatus(type, text) {
@@ -1438,10 +1597,55 @@ function loadPersistedSettings() {
     if (dom.modelProgress) dom.modelProgress.classList.add('active');
     if (dom.startBtn) dom.startBtn.setAttribute('disabled', 'true');
   }
+  
+  if (dom.micDeviceSelect) {
+    dom.micDeviceSelect.value = state.settings.audioDeviceId || '';
+  }
+  
+  loadAISettings();
 }
 
 function savePersistedSettings() {
   localStorage.setItem('teleprompter_settings', JSON.stringify(state.settings));
+}
+
+function loadAISettings() {
+  const provider = localStorage.getItem('ai_provider') || 'google-ai-studio';
+  if ($('aiProviderSelect')) $('aiProviderSelect').value = provider;
+  
+  if (provider === 'google-ai-studio') {
+    if ($('aiStudioConfig')) $('aiStudioConfig').classList.remove('hidden');
+    if ($('vertexConfig')) $('vertexConfig').classList.add('hidden');
+  } else {
+    if ($('aiStudioConfig')) $('aiStudioConfig').classList.add('hidden');
+    if ($('vertexConfig')) $('vertexConfig').classList.remove('hidden');
+  }
+
+  const savedApiKey = localStorage.getItem('gemini_api_key');
+  if (savedApiKey && $('geminiApiKey')) $('geminiApiKey').value = savedApiKey;
+
+  const projectId = localStorage.getItem('vertex_project_id') || '';
+  if ($('vertexProjectId')) $('vertexProjectId').value = projectId;
+
+  const location = localStorage.getItem('vertex_location') || 'us-central1';
+  if ($('vertexLocation')) $('vertexLocation').value = location;
+
+  const authMethod = localStorage.getItem('vertex_auth_method') || 'api-key';
+  if ($('vertexAuthMethod')) $('vertexAuthMethod').value = authMethod;
+
+  if (authMethod === 'api-key') {
+    if ($('vertexApiKeyContainer')) $('vertexApiKeyContainer').classList.remove('hidden');
+    if ($('vertexServiceAccountContainer')) $('vertexServiceAccountContainer').classList.add('hidden');
+  } else {
+    if ($('vertexApiKeyContainer')) $('vertexApiKeyContainer').classList.add('hidden');
+    if ($('vertexServiceAccountContainer')) $('vertexServiceAccountContainer').classList.remove('hidden');
+  }
+
+  const vertexApiKey = localStorage.getItem('vertex_api_key') || '';
+  if ($('vertexApiKey')) $('vertexApiKey').value = vertexApiKey;
+
+  const serviceAccountJson = localStorage.getItem('vertex_service_account_json') || '';
+  if ($('vertexServiceAccountJson')) $('vertexServiceAccountJson').value = serviceAccountJson;
 }
 
 function toggleModalUrlVisibility() {
@@ -1614,6 +1818,44 @@ function bindEvents() {
     }
   };
 
+  if (dom.micDeviceSelect) {
+    dom.micDeviceSelect.onchange = (e) => {
+      state.settings.audioDeviceId = e.target.value;
+      savePersistedSettings();
+    };
+  }
+
+  if (dom.micTestBtn) {
+    dom.micTestBtn.onclick = () => {
+      if (micTestStream) {
+        stopMicTest();
+      } else {
+        startMicTest();
+      }
+    };
+  }
+
+  const livePreviewText = document.getElementById('livePreviewText');
+  if (livePreviewText) {
+    livePreviewText.addEventListener('click', (e) => {
+      const clickedWord = e.target.closest('.word');
+      if (!clickedWord) return;
+      
+      const allPreviewWords = Array.from(livePreviewText.querySelectorAll('.word'));
+      const clickedIndex = allPreviewWords.indexOf(clickedWord);
+      if (clickedIndex === -1) return;
+      
+      allPreviewWords.forEach((wordSpan, idx) => {
+        wordSpan.classList.remove('spoken', 'current');
+        if (idx < clickedIndex) {
+          wordSpan.classList.add('spoken');
+        } else if (idx === clickedIndex) {
+          wordSpan.classList.add('current');
+        }
+      });
+    });
+  }
+
   // Launch transparent overlay window via IPC
   dom.launchOverlayBtn.onclick = () => {
     if (state.overlayActive) {
@@ -1648,25 +1890,35 @@ function bindEvents() {
   };
 
   // Sidebar tab switching
-  const tabBtnTracking = document.getElementById('tabBtnTracking');
+  const tabBtnPrep = document.getElementById('stepBtnPrep');
   const tabBtnStyles = document.getElementById('tabBtnStyles');
-  const tabPaneTracking = document.getElementById('sidebarTabTracking');
-  const tabPaneStyles = document.getElementById('sidebarTabStyles');
+  const tabBtnTracking = document.getElementById('tabBtnTracking');
+  const tabBtnSettings = document.getElementById('tabBtnSettings');
 
-  if (tabBtnTracking && tabBtnStyles) {
-    tabBtnTracking.onclick = () => {
-      tabBtnTracking.classList.add('active');
-      tabBtnStyles.classList.remove('active');
-      tabPaneTracking.classList.add('active');
-      tabPaneStyles.classList.remove('active');
-    };
-    tabBtnStyles.onclick = () => {
-      tabBtnStyles.classList.add('active');
-      tabBtnTracking.classList.remove('active');
-      tabPaneStyles.classList.add('active');
-      tabPaneTracking.classList.remove('active');
-    };
-  }
+  const tabPanePrep = document.getElementById('stepPrepContainer');
+  const tabPaneStyles = document.getElementById('sidebarTabStyles');
+  const tabPaneTracking = document.getElementById('sidebarTabTracking');
+  const tabPaneSettings = document.getElementById('sidebarTabSettings');
+
+  const tabs = [
+    { button: tabBtnPrep, pane: tabPanePrep },
+    { button: tabBtnStyles, pane: tabPaneStyles },
+    { button: tabBtnTracking, pane: tabPaneTracking },
+    { button: tabBtnSettings, pane: tabPaneSettings }
+  ];
+
+  tabs.forEach(tab => {
+    if (tab.button && tab.pane) {
+      tab.button.onclick = () => {
+        tabs.forEach(t => {
+          if (t.button) t.button.classList.remove('active');
+          if (t.pane) t.pane.classList.remove('active');
+        });
+        tab.button.classList.add('active');
+        tab.pane.classList.add('active');
+      };
+    }
+  });
 
   // AI Assistant panel toggle
   const aiAssistBtn = $('aiAssistBtn');
@@ -1683,6 +1935,66 @@ function bindEvents() {
   if (geminiApiKeyInput) {
     geminiApiKeyInput.onchange = (e) => {
       localStorage.setItem('gemini_api_key', e.target.value.trim());
+    };
+  }
+
+  const aiProviderSelect = $('aiProviderSelect');
+  const aiStudioConfig = $('aiStudioConfig');
+  const vertexConfig = $('vertexConfig');
+  const vertexProjectIdInput = $('vertexProjectId');
+  const vertexLocationInput = $('vertexLocation');
+  const vertexAuthMethod = $('vertexAuthMethod');
+  const vertexApiKeyContainer = $('vertexApiKeyContainer');
+  const vertexApiKeyInput = $('vertexApiKey');
+  const vertexServiceAccountContainer = $('vertexServiceAccountContainer');
+  const vertexServiceAccountJsonInput = $('vertexServiceAccountJson');
+
+  if (aiProviderSelect) {
+    aiProviderSelect.onchange = (e) => {
+      const val = e.target.value;
+      localStorage.setItem('ai_provider', val);
+      if (val === 'google-ai-studio') {
+        if (aiStudioConfig) aiStudioConfig.classList.remove('hidden');
+        if (vertexConfig) vertexConfig.classList.add('hidden');
+      } else {
+        if (aiStudioConfig) aiStudioConfig.classList.add('hidden');
+        if (vertexConfig) vertexConfig.classList.remove('hidden');
+      }
+    };
+  }
+
+  if (vertexAuthMethod) {
+    vertexAuthMethod.onchange = (e) => {
+      const val = e.target.value;
+      localStorage.setItem('vertex_auth_method', val);
+      if (val === 'api-key') {
+        if (vertexApiKeyContainer) vertexApiKeyContainer.classList.remove('hidden');
+        if (vertexServiceAccountContainer) vertexServiceAccountContainer.classList.add('hidden');
+      } else {
+        if (vertexApiKeyContainer) vertexApiKeyContainer.classList.add('hidden');
+        if (vertexServiceAccountContainer) vertexServiceAccountContainer.classList.remove('hidden');
+      }
+    };
+  }
+
+  if (vertexProjectIdInput) {
+    vertexProjectIdInput.onchange = (e) => {
+      localStorage.setItem('vertex_project_id', e.target.value.trim());
+    };
+  }
+  if (vertexLocationInput) {
+    vertexLocationInput.onchange = (e) => {
+      localStorage.setItem('vertex_location', e.target.value.trim());
+    };
+  }
+  if (vertexApiKeyInput) {
+    vertexApiKeyInput.onchange = (e) => {
+      localStorage.setItem('vertex_api_key', e.target.value.trim());
+    };
+  }
+  if (vertexServiceAccountJsonInput) {
+    vertexServiceAccountJsonInput.onchange = (e) => {
+      localStorage.setItem('vertex_service_account_json', e.target.value.trim());
     };
   }
 
@@ -1711,10 +2023,35 @@ function bindEvents() {
   const aiUndoBtn = $('aiUndoBtn');
   if (aiRunBtn) {
     aiRunBtn.onclick = async () => {
-      const apiKey = localStorage.getItem('gemini_api_key') || (geminiApiKeyInput ? geminiApiKeyInput.value.trim() : '');
-      if (!apiKey) {
-        alert('Please enter your Gemini API Key first.');
-        return;
+      const provider = localStorage.getItem('ai_provider') || 'google-ai-studio';
+      
+      if (provider === 'google-ai-studio') {
+        const apiKey = localStorage.getItem('gemini_api_key') || (geminiApiKeyInput ? geminiApiKeyInput.value.trim() : '');
+        if (!apiKey) {
+          alert('Please enter your Gemini API Key first.');
+          return;
+        }
+      } else {
+        const projectId = localStorage.getItem('vertex_project_id') || (vertexProjectIdInput ? vertexProjectIdInput.value.trim() : '');
+        if (!projectId) {
+          alert('Please enter your GCP Project ID first.');
+          return;
+        }
+        
+        const authMethod = localStorage.getItem('vertex_auth_method') || (vertexAuthMethod ? vertexAuthMethod.value : 'api-key');
+        if (authMethod === 'api-key') {
+          const apiKey = localStorage.getItem('vertex_api_key') || (vertexApiKeyInput ? vertexApiKeyInput.value.trim() : '');
+          if (!apiKey) {
+            alert('Please enter your Vertex API Key first.');
+            return;
+          }
+        } else {
+          const saJson = localStorage.getItem('vertex_service_account_json') || (vertexServiceAccountJsonInput ? vertexServiceAccountJsonInput.value.trim() : '');
+          if (!saJson) {
+            alert('Please enter your Service Account JSON first.');
+            return;
+          }
+        }
       }
       
       const originalText = dom.scriptInput.value.trim();
@@ -1952,6 +2289,8 @@ window.addEventListener('DOMContentLoaded', () => {
   bindEvents();
   setupIpcListeners();
   loadPersistedSettings();
+  populateMicDevices();
+  navigator.mediaDevices.ondevicechange = populateMicDevices;
   
   // Persist API Key to UI input on load
   const savedApiKey = localStorage.getItem('gemini_api_key');
@@ -2129,7 +2468,7 @@ function showSessionAnalytics() {
   
   if (feedbackEl) {
     if (!apiKey) {
-      feedbackEl.textContent = 'Enter your Gemini API Key in the "AI Assistant" sidebar panel to get an automated presentation coach review and personalized delivery tips.';
+      feedbackEl.textContent = 'Enter your Gemini API Key in the "Settings" screen to get an automated presentation coach review and personalized delivery tips.';
       if (spinnerEl) spinnerEl.classList.add('hidden');
       return;
     }
@@ -2178,55 +2517,112 @@ function typeText(element, text) {
 }
 
 async function callGeminiAPI(prompt, systemInstruction = '') {
-  const apiKey = localStorage.getItem('gemini_api_key') || ($('geminiApiKey') ? $('geminiApiKey').value.trim() : '');
-  if (!apiKey) {
-    throw new Error('Gemini API Key is missing. Please provide it in the AI Assistant sidebar panel.');
-  }
+  const provider = localStorage.getItem('ai_provider') || 'google-ai-studio';
 
-  const model = 'gemini-2.5-flash';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  if (provider === 'google-ai-studio') {
+    const apiKey = localStorage.getItem('gemini_api_key') || ($('geminiApiKey') ? $('geminiApiKey').value.trim() : '');
+    if (!apiKey) {
+      throw new Error('Gemini API Key is missing. Please provide it in the Settings screen.');
+    }
 
-  const payload = {
-    contents: [
-      {
-        parts: [
-          {
-            text: prompt
-          }
-        ]
-      }
-    ]
-  };
+    const model = 'gemini-2.5-flash';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-  if (systemInstruction) {
-    payload.systemInstruction = {
-      parts: [
+    const payload = {
+      contents: [
         {
-          text: systemInstruction
+          parts: [
+            {
+              text: prompt
+            }
+          ]
         }
       ]
     };
+
+    if (systemInstruction) {
+      payload.systemInstruction = {
+        parts: [
+          {
+            text: systemInstruction
+          }
+        ]
+      };
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      const errMsg = errData?.error?.message || `HTTP ${response.status} ${response.statusText}`;
+      throw new Error(errMsg);
+    }
+
+    const data = await response.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) {
+      throw new Error('Empty response from Gemini API.');
+    }
+
+    return text.trim();
+  } else {
+    // Vertex AI
+    const projectId = localStorage.getItem('vertex_project_id') || ($('vertexProjectId') ? $('vertexProjectId').value.trim() : '');
+    const location = localStorage.getItem('vertex_location') || ($('vertexLocation') ? $('vertexLocation').value.trim() : 'us-central1');
+    const authMethod = localStorage.getItem('vertex_auth_method') || ($('vertexAuthMethod') ? $('vertexAuthMethod').value : 'api-key');
+    const apiKey = localStorage.getItem('vertex_api_key') || ($('vertexApiKey') ? $('vertexApiKey').value.trim() : '');
+    const serviceAccountJson = localStorage.getItem('vertex_service_account_json') || ($('vertexServiceAccountJson') ? $('vertexServiceAccountJson').value.trim() : '');
+
+    if (!projectId) {
+      throw new Error('GCP Project ID is missing. Please configure it in the Settings screen.');
+    }
+
+    const model = 'gemini-2.5-flash';
+    const payload = {
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              text: prompt
+            }
+          ]
+        }
+      ]
+    };
+
+    if (systemInstruction) {
+      payload.systemInstruction = {
+        parts: [
+          {
+            text: systemInstruction
+          }
+        ]
+      };
+    }
+
+    // Call through Electron bridge
+    const data = await window.electronAPI.callVertexAPI({
+      projectId,
+      location,
+      model,
+      authMethod,
+      apiKey,
+      serviceAccountJson,
+      payload
+    });
+
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) {
+      throw new Error('Empty response from Vertex AI.');
+    }
+
+    return text.trim();
   }
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
-  });
-
-  if (!response.ok) {
-    const errData = await response.json().catch(() => ({}));
-    const errMsg = errData?.error?.message || `HTTP ${response.status} ${response.statusText}`;
-    throw new Error(errMsg);
-  }
-
-  const data = await response.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) {
-    throw new Error('Empty response from Gemini API.');
-  }
-
-  return text.trim();
 }

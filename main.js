@@ -3,6 +3,8 @@ app.commandLine.appendSwitch('enable-unsafe-webgpu');
 const path = require('path');
 const http = require('http');
 const fs = require('fs');
+const crypto = require('crypto');
+
 
 try {
   require('electron-reloader')(module);
@@ -259,6 +261,112 @@ function setupIpcHandlers() {
       return false;
     }
   });
+
+  // Vertex AI API Call Handler
+  ipcMain.handle('call-vertex-api', async (event, { projectId, location, model, authMethod, apiKey, serviceAccountJson, payload }) => {
+    try {
+      const loc = location || 'us-central1';
+      const host = loc === 'global' ? 'aiplatform.googleapis.com' : `${loc}-aiplatform.googleapis.com`;
+      const endpoint = `https://${host}/v1/projects/${projectId}/locations/${loc}/publishers/google/models/${model}:generateContent`;
+
+      let headers = {
+        'Content-Type': 'application/json'
+      };
+
+      let url = endpoint;
+
+      if (authMethod === 'api-key') {
+        if (!apiKey) {
+          throw new Error('API Key is missing for Vertex AI authentication.');
+        }
+        url = `${endpoint}?key=${apiKey}`;
+      } else if (authMethod === 'service-account') {
+        if (!serviceAccountJson) {
+          throw new Error('Service Account JSON is missing for Vertex AI authentication.');
+        }
+        const accessToken = await getServiceAccountAccessToken(serviceAccountJson);
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      } else {
+        throw new Error(`Unsupported authentication method: ${authMethod}`);
+      }
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        let errMsg = `HTTP ${response.status} ${response.statusText}`;
+        try {
+          const errJson = JSON.parse(errText);
+          if (errJson.error && errJson.error.message) {
+            errMsg = errJson.error.message;
+          }
+        } catch (_) {}
+        throw new Error(errMsg);
+      }
+
+      return await response.json();
+    } catch (err) {
+      console.error('Vertex AI Call error:', err);
+      throw err; // Reject in renderer
+    }
+  });
+}
+
+async function getServiceAccountAccessToken(serviceAccountJson) {
+  const sa = JSON.parse(serviceAccountJson);
+  const header = {
+    alg: 'RS256',
+    typ: 'JWT'
+  };
+  const now = Math.floor(Date.now() / 1000);
+  const claim = {
+    iss: sa.client_email,
+    scope: 'https://www.googleapis.com/auth/cloud-platform',
+    aud: 'https://oauth2.googleapis.com/token',
+    exp: now + 3600,
+    iat: now
+  };
+  
+  const base64UrlEncode = (obj) => {
+    return Buffer.from(JSON.stringify(obj))
+      .toString('base64')
+      .replace(/=/g, '')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_');
+  };
+  
+  const encodedHeader = base64UrlEncode(header);
+  const encodedClaim = base64UrlEncode(claim);
+  const signatureInput = `${encodedHeader}.${encodedClaim}`;
+  
+  const sign = crypto.createSign('RSA-SHA256');
+  sign.update(signatureInput);
+  const signature = sign.sign(sa.private_key, 'base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+    
+  const jwt = `${signatureInput}.${signature}`;
+  
+  const response = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
+  });
+  
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`OAuth token exchange failed: ${errText}`);
+  }
+  
+  const data = await response.json();
+  return data.access_token;
 }
 
 // ═══════════════════════════════════════════════════════

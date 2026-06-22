@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Permissions & Shortcuts
   requestMicrophone: () => ipcRenderer.invoke('request-microphone-permission'),
+  callVertexAPI: (options) => ipcRenderer.invoke('call-vertex-api', options),
   onHotkeyTriggered: (callback) => {
     const subscription = (event, hotkey) => callback(hotkey);
     ipcRenderer.on('hotkey-triggered', subscription);

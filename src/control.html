@@ -14,8 +14,8 @@
       <svg class="titlebar-logo" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
       AI TELEPROMPTER — CONTROL CENTER
     </div>
-    <div style="display: flex; align-items: center; gap: 8px;">
-      <button id="shortcutsBtn" class="titlebar-theme-btn" title="Keyboard Shortcuts" style="width: auto; padding: 0 10px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+    <div class="titlebar-controls">
+      <button id="shortcutsBtn" class="titlebar-theme-btn" title="Keyboard Shortcuts">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3zM8 12h8M12 8v8"/></svg>
         SHORTCUTS
       </button>
@@ -28,238 +28,128 @@
 
   <div class="app-container">
     
-    <!-- Left Column: Stats & Editor -->
-    <div class="left-column">
-      
-      <!-- Stats Dashboard -->
-      <div class="dashboard-stats-grid">
-        <div class="stat-card">
-          <div class="stat-icon-wrapper">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1zM21 12h-8a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1zM11 22H3a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1zM21 22h-8a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1z"/></svg>
-          </div>
-          <div class="stat-info">
-            <span class="stat-label">Speaking Speed</span>
-            <div class="stat-val-container">
-              <strong class="stat-val" id="wpmValue">—</strong>
-              <span class="stat-unit">WPM</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="stat-card">
-          <div class="stat-icon-wrapper">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-          </div>
-          <div class="stat-info">
-            <span class="stat-label">Remaining Time</span>
-            <div class="stat-val-container">
-              <strong class="stat-val" id="etaValue">--</strong>
-            </div>
-          </div>
-        </div>
-        
-        <div class="stat-card">
-          <div class="stat-icon-wrapper">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-          </div>
-          <div class="stat-info">
-            <span class="stat-label">Progress</span>
-            <div class="stat-val-container">
-              <strong class="stat-val" id="progressValue">0%</strong>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Script Editor -->
-      <div class="panel-editor glass-panel">
-        <div class="panel-header">
-          <h2 class="panel-title">Presentation Script</h2>
-          <div class="btn-group">
-            <button id="aiAssistBtn" class="btn btn-secondary btn-sm" title="AI Script Assistant">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5 5 3Z"/><path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1 1-2.5Z"/></svg>
-              <span>AI Assistant</span>
-            </button>
-            <button id="sampleScriptBtn" class="btn btn-secondary btn-sm" title="Load Default Script">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
-              <span>Load Sample</span>
-            </button>
-            <button id="clearScriptBtn" class="btn btn-secondary btn-sm" title="Clear All Text">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M10 11v6M14 11v6"/></svg>
-              <span>Clear</span>
-            </button>
-          </div>
-        </div>
-        
-        <div class="editor-workspace">
-          <textarea id="scriptInput" placeholder="Paste or type your presentation script here..."></textarea>
-          
-          <div id="aiAssistantPanel" class="ai-assistant-panel hidden">
-            <div class="ai-panel-section">
-              <label class="settings-label">Gemini API Key</label>
-              <div class="api-key-container">
-                <input type="password" id="geminiApiKey" class="text-input" placeholder="AIzaSy...">
-              </div>
-              <div class="api-key-help">Stored locally in your browser.</div>
-            </div>
-            
-            <div class="ai-panel-section">
-              <label class="settings-label">AI Speech Optimization Options</label>
-              <div class="ai-presets-grid">
-                <label class="ai-preset-btn" title="Rewrite script to sound natural when spoken out loud">
-                  <input type="checkbox" class="ai-preset-checkbox hidden" value="conversational">
-                  <span class="ai-preset-icon">🗣️</span>
-                  <span class="ai-preset-name">Conversational</span>
-                </label>
-                <label class="ai-preset-btn" title="Insert breathing markers (/) at logical pauses">
-                  <input type="checkbox" class="ai-preset-checkbox hidden" value="breaths">
-                  <span class="ai-preset-icon">🫁</span>
-                  <span class="ai-preset-name">Breath Guides</span>
-                </label>
-                <label class="ai-preset-btn" title="Convert numbers ($100 to one hundred) and acronyms to speakable words">
-                  <input type="checkbox" class="ai-preset-checkbox hidden" value="format">
-                  <span class="ai-preset-icon">🔢</span>
-                  <span class="ai-preset-name">Spelled Numbers</span>
-                </label>
-                <label class="ai-preset-btn" title="Condense script, making sentences concise and direct">
-                  <input type="checkbox" class="ai-preset-checkbox hidden" value="shorten">
-                  <span class="ai-preset-icon">✂️</span>
-                  <span class="ai-preset-name">Shorten Text</span>
-                </label>
-              </div>
-            </div>
-            
-            <div class="ai-panel-section" style="flex: 1; display: flex; flex-direction: column;">
-              <label class="settings-label">Custom Instruction / Draft Prompt</label>
-              <textarea id="aiCustomPrompt" class="ai-prompt-input" placeholder="e.g., Rewrite this script to be funny and enthusiastic, or write a new script on how photosynthesis works..."></textarea>
-            </div>
-
-            <div class="ai-actions">
-              <button id="aiRunBtn" class="btn btn-primary" style="width: 100%;">
-                <svg class="ai-spinner hidden" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align: text-top; margin-right: 4px; display: none;"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="62" stroke-dashoffset="15"/></svg>
-                <span>Run AI Writer</span>
-              </button>
-              <button id="aiUndoBtn" class="btn btn-secondary hidden" style="width: 100%; margin-top: 8px;">
-                <span>↩️ Undo AI Edit</span>
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        <button id="launchOverlayBtn" class="btn btn-primary launcher-btn">
-          <svg class="launcher-icon-play" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3"/></svg>
-          <span id="launcherBtnText">Launch Teleprompter Overlay</span>
-        </button>
-      </div>
-
+    <!-- Wizard Progress Navigation Header -->
+    <div class="wizard-header">
+      <button id="stepBtnPrep" class="wizard-step active">
+        <span class="step-num">1</span>
+        <span class="step-label">Draft Script</span>
+      </button>
+      <div class="wizard-line"></div>
+      <button id="tabBtnStyles" class="wizard-step">
+        <span class="step-num">2</span>
+        <span class="step-label">Configure Styles</span>
+      </button>
+      <div class="wizard-line"></div>
+      <button id="tabBtnTracking" class="wizard-step">
+        <span class="step-num">3</span>
+        <span class="step-label">Present & Coach</span>
+      </button>
+      <div class="wizard-line"></div>
+      <button id="tabBtnSettings" class="wizard-step">
+        <span class="step-num">⚙️</span>
+        <span class="step-label">Settings</span>
+      </button>
     </div>
 
-    <!-- Right Column: Sidebar (Tabs Control Center) -->
-    <div class="right-column">
-      
-      <!-- Unified Sidebar Panel -->
-      <div class="sidebar-panel glass-panel">
-        
-        <!-- Sidebar Navigation Tabs -->
-        <div class="sidebar-tabs">
-          <button id="tabBtnTracking" class="tab-btn active" data-target="sidebarTabTracking">
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 19v4M8 23h8"/></svg>
-            <span>Tracking & AI</span>
-          </button>
-          <button id="tabBtnStyles" class="tab-btn" data-target="sidebarTabStyles">
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24M14.83 9.17l4.24-4.24M14.83 14.83l4.24 4.24M9.17 14.83l-4.24 4.24"/></svg>
-            <span>Overlay Visuals</span>
-          </button>
-        </div>
+    <div class="wizard-content">
 
-        <div class="sidebar-tab-content">
-          
-          <!-- TAB 1: ASR & Tracking -->
-          <div id="sidebarTabTracking" class="tab-pane active">
-            
-            <!-- AI Engine Status Badge -->
-            <div class="engine-status-block">
-              <div class="status-badge-row">
-                <span class="settings-label">Engine Status</span>
-                <span id="statusBadge" class="status-badge status-idle">
-                  <span class="pulse-dot"></span>
-                  <span id="statusText">Initializing...</span>
-                </span>
-              </div>
-              
-              <!-- Progress bar for loading ONNX models -->
-              <div id="modelProgress" class="progress-bar-container">
-                <div id="modelProgressBar" class="progress-bar-fill"></div>
-              </div>
-              
-              <div id="engineIndicator" class="engine-info">Engine: Loading AI model...</div>
-            </div>
-
-            <!-- Voice Activity Waveform -->
-            <div class="voice-activity-panel">
-              <span class="settings-label">Voice Activity Indicator</span>
-              <div class="voice-waveform-container" id="waveformContainer">
-                <div class="wave-bar"></div>
-                <div class="wave-bar"></div>
-                <div class="wave-bar"></div>
-                <div class="wave-bar"></div>
-                <div class="wave-bar"></div>
-                <div class="wave-bar"></div>
-                <div class="wave-bar"></div>
-                <div class="wave-bar"></div>
-              </div>
-            </div>
-
-            <!-- Transcript Logs -->
-            <div class="transcript-logs-panel">
-              <span class="settings-label">ASR Real-Time Transcript</span>
-              <div id="transcriptBox" class="transcript-log-box">
-                <span class="transcript-placeholder">Start speaking to see your text transcribed in real-time...</span>
-              </div>
-              <div id="interimBox" class="interim-text"></div>
-            </div>
-
-            <!-- Tracking Controls Trigger Buttons -->
-            <div class="tracking-action-group">
+      <!-- STEP 1: Draft Script -->
+      <div id="stepPrepContainer" class="wizard-pane active">
+        <div class="step-editor-layout">
+          <div class="panel-editor glass-panel">
+            <div class="panel-header">
+              <h2 class="panel-title">Presentation Script</h2>
               <div class="btn-group">
-                <button id="startBtn" class="btn btn-primary" style="flex: 1;" disabled>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 19v4M8 23h8"/></svg>
-                  <span>Start Track</span>
+                <button id="aiAssistBtn" class="btn btn-secondary btn-sm" title="AI Script Assistant">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5 5 3Z"/><path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1 1-2.5Z"/></svg>
+                  <span>AI Assistant</span>
                 </button>
-                <button id="stopBtn" class="btn btn-danger" style="flex: 1;" disabled>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
-                  <span>Stop</span>
+                <button id="sampleScriptBtn" class="btn btn-secondary btn-sm" title="Load Default Script">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+                  <span>Load Sample</span>
+                </button>
+                <button id="clearScriptBtn" class="btn btn-secondary btn-sm" title="Clear All Text">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M10 11v6M14 11v6"/></svg>
+                  <span>Clear</span>
                 </button>
               </div>
-              <button id="resetBtn" class="btn btn-secondary" style="width: 100%; margin-top: 8px;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16M3 21v-5h5"/></svg>
-                <span>Reset Position</span>
+            </div>
+            
+            <div class="editor-workspace">
+              <textarea id="scriptInput" placeholder="Paste or type your presentation script here..."></textarea>
+              
+              <div id="aiAssistantPanel" class="ai-assistant-panel hidden">
+                <!-- Redirection banner to Settings screen -->
+                <div class="ai-config-banner">
+                  <div class="ai-config-banner-text">AI configuration is managed globally.</div>
+                  <a href="#" id="aiConfigLink" class="inline-link">Configure AI Provider & Key ⚙️</a>
+                </div>
+                
+                <div class="ai-panel-section">
+                  <label class="settings-label">AI Speech Optimization Options</label>
+                  <div class="ai-presets-grid">
+                    <label class="ai-preset-btn" title="Rewrite script to sound natural when spoken out loud">
+                      <input type="checkbox" class="ai-preset-checkbox hidden" value="conversational">
+                      <span class="ai-preset-icon">🗣️</span>
+                      <span class="ai-preset-name">Conversational</span>
+                    </label>
+                    <label class="ai-preset-btn" title="Insert breathing markers (/) at logical pauses">
+                      <input type="checkbox" class="ai-preset-checkbox hidden" value="breaths">
+                      <span class="ai-preset-icon">🫁</span>
+                      <span class="ai-preset-name">Breath Guides</span>
+                    </label>
+                    <label class="ai-preset-btn" title="Convert numbers ($100 to one hundred) and acronyms to speakable words">
+                      <input type="checkbox" class="ai-preset-checkbox hidden" value="format">
+                      <span class="ai-preset-icon">🔢</span>
+                      <span class="ai-preset-name">Spelled Numbers</span>
+                    </label>
+                    <label class="ai-preset-btn" title="Condense script, making sentences concise and direct">
+                      <input type="checkbox" class="ai-preset-checkbox hidden" value="shorten">
+                      <span class="ai-preset-icon">✂️</span>
+                      <span class="ai-preset-name">Shorten Text</span>
+                    </label>
+                  </div>
+                </div>
+                
+                <div class="ai-panel-section ai-prompt-section">
+                  <label class="settings-label">Custom Instruction / Draft Prompt</label>
+                  <textarea id="aiCustomPrompt" class="ai-prompt-input" placeholder="e.g., Rewrite this script to be funny and enthusiastic, or write a new script on how photosynthesis works..."></textarea>
+                </div>
+
+                <div class="ai-actions">
+                  <button id="aiRunBtn" class="btn btn-primary">
+                    <svg class="ai-spinner hidden" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="62" stroke-dashoffset="15"/></svg>
+                    <span>Run AI Writer</span>
+                  </button>
+                  <button id="aiUndoBtn" class="btn btn-secondary hidden">
+                    <span>↩️ Undo AI Edit</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div class="step-footer">
+              <div class="editor-info-help">Draft your speech, then configure the teleprompter styles.</div>
+              <button id="nextToConfigure" class="btn btn-primary">
+                <span>Configure Styles</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
               </button>
             </div>
-
-            <!-- Speech engine configuration selectors -->
-            <div class="speech-engine-settings">
-              <div class="settings-group">
-                <span class="settings-label">Speech Engine</span>
-                <select id="engineSelect" class="select-dropdown">
-                  <option value="local">Local Model (Moonshine Tiny)</option>
-                  <option value="modal">Modal Cloud (Whisper Large)</option>
-                </select>
-              </div>
-              
-              <div id="modalUrlGroup" class="settings-group hidden" style="margin-top: 10px;">
-                <span class="settings-label">Modal Endpoint URL</span>
-                <input type="text" id="modalUrlInput" class="text-input" placeholder="https://username--teleprompter-asr-transcriber-transcribe.modal.run">
-              </div>
-            </div>
-
           </div>
+        </div>
+      </div>
 
-          <!-- TAB 2: Overlay Configurations -->
-          <div id="sidebarTabStyles" class="tab-pane">
+      <!-- STEP 2: Configure Styles -->
+      <div id="sidebarTabStyles" class="wizard-pane tab-pane">
+        <div class="step-configure-layout">
+          
+          <!-- Left Panel: All Configurations -->
+          <div class="config-controls-panel glass-panel">
+            <div class="panel-header">
+              <h2 class="panel-title">Teleprompter Customization</h2>
+            </div>
             
             <div class="styles-pane-scroller">
-              
               <div class="settings-group">
                 <span class="settings-label">Target Speed (WPM)</span>
                 <div class="slider-container">
@@ -341,12 +231,294 @@
                 </div>
               </div>
 
+
             </div>
-
+            
+            <div class="step-footer">
+              <div class="editor-info-help">Customize variables, then head to the presenter dashboard.</div>
+              <button id="nextToPresent" class="btn btn-primary">
+                <span>Go to Presenter Console</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </button>
+            </div>
           </div>
-
+          
+          <!-- Right Panel: Live Visual Style Preview Box -->
+          <div class="config-preview-panel glass-panel">
+            <div class="panel-header">
+              <h2 class="panel-title">Live Visual Preview</h2>
+            </div>
+            <div class="preview-workspace">
+              <div id="livePreviewBox" class="live-preview-box theme-glass">
+                <div class="preview-text-viewport">
+                  <div id="livePreviewText" class="live-preview-text font-sans align-center">
+                    <span class="word spoken">Welcome</span>
+                    <span class="word spoken">to</span>
+                    <span class="word spoken">the</span>
+                    <span class="word spoken">AI</span>
+                    <span class="word current">Teleprompter</span>
+                    <span class="word">preview.</span>
+                    <span class="word">This</span>
+                    <span class="word">text</span>
+                    <span class="word">simulates</span>
+                    <span class="word">the</span>
+                    <span class="word">exact</span>
+                    <span class="word">appearance</span>
+                    <span class="word">of</span>
+                    <span class="word">your</span>
+                    <span class="word">scrolling</span>
+                    <span class="word">overlay</span>
+                    <span class="word">style</span>
+                    <span class="word">and</span>
+                    <span class="word">highlighting</span>
+                    <span class="word">focus.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
         </div>
+      </div>
 
+      <!-- STEP 3: Present & Coach -->
+      <div id="sidebarTabTracking" class="wizard-pane tab-pane">
+        <div class="step-present-layout">
+          
+          <!-- Left Panel: Launch & Reference Shortcuts -->
+          <div class="present-launcher-panel glass-panel">
+            <div class="panel-header">
+              <h2 class="panel-title">Presenter Actions</h2>
+            </div>
+            
+            <div class="present-launcher-content">
+              <div class="launcher-cta-box">
+                <p class="launcher-cta-desc">Launch the overlay and position it near your camera. The overlay is transparent to screen share software.</p>
+                <button id="launchOverlayBtn" class="btn btn-primary launcher-btn">
+                  <svg class="launcher-icon-play" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3"/></svg>
+                  <span id="launcherBtnText">Launch Teleprompter Overlay</span>
+                </button>
+              </div>
+              
+              <div class="present-shortcuts-box">
+                <span class="settings-label">Quick Keyboard Controls</span>
+                <div class="shortcuts-mini-grid">
+                  <div class="shortcut-mini-row"><span class="key-pill">Opt + Space</span><span>Play / Pause Scrolling</span></div>
+                  <div class="shortcut-mini-row"><span class="key-pill">Opt + Up/Down</span><span>Nudge Line Position</span></div>
+                  <div class="shortcut-mini-row"><span class="key-pill">Opt + H</span><span>Hide / Show Overlay</span></div>
+                  <div class="shortcut-mini-row"><span class="key-pill">Opt + Escape</span><span>Close Overlay</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Right Panel: Presenter Control Console -->
+          <div class="present-console-panel glass-panel">
+            <div class="panel-header">
+              <h2 class="panel-title">Presenter Console</h2>
+              
+              <!-- AI Engine Status Badge -->
+              <span id="statusBadge" class="status-badge status-idle">
+                <span class="pulse-dot"></span>
+                <span id="statusText">Initializing...</span>
+              </span>
+            </div>
+            
+            <div class="present-console-content">
+              <!-- Progress bar for loading ONNX models -->
+              <div id="modelProgress" class="progress-bar-container">
+                <div id="modelProgressBar" class="progress-bar-fill"></div>
+              </div>
+              <div id="engineIndicator" class="engine-info" style="margin-bottom: 8px;">Engine: Loading AI model...</div>
+
+              <!-- Session Controls -->
+              <div class="tracking-action-group" style="margin-top: 0;">
+                <div class="btn-group">
+                  <button id="startBtn" class="btn btn-primary" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 19v4M8 23h8"/></svg>
+                    <span>Start Track</span>
+                  </button>
+                  <button id="stopBtn" class="btn btn-danger" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+                    <span>Stop Track</span>
+                  </button>
+                </div>
+                <button id="resetBtn" class="btn btn-secondary" style="margin-top: 8px; width: 100%;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16M3 21v-5h5"/></svg>
+                  <span>Reset Position</span>
+                </button>
+              </div>
+
+              <!-- Speaking Metrics Stack -->
+              <div class="sidebar-stats-stack" style="margin-top: 8px;">
+                <div class="stat-card">
+                  <div class="stat-icon-wrapper">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1zM21 12h-8a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1zM11 22H3a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1zM21 22h-8a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1z"/></svg>
+                  </div>
+                  <div class="stat-info">
+                    <span class="stat-label">Speaking Speed</span>
+                    <div class="stat-val-container">
+                      <strong class="stat-val" id="wpmValue">—</strong>
+                      <span class="stat-unit">WPM</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="settings-row-2col">
+                  <div class="stat-card">
+                    <div class="stat-icon-wrapper">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                    </div>
+                    <div class="stat-info">
+                      <span class="stat-label">ETA</span>
+                      <div class="stat-val-container">
+                        <strong class="stat-val" id="etaValue">--</strong>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="stat-card">
+                    <div class="stat-icon-wrapper">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    </div>
+                    <div class="stat-info">
+                      <span class="stat-label">Progress</span>
+                      <div class="stat-val-container">
+                        <strong class="stat-val" id="progressValue">0%</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Voice Activity Waveform -->
+              <div class="voice-activity-panel">
+                <span class="settings-label">Voice Activity</span>
+                <div class="voice-waveform-container" id="waveformContainer">
+                  <div class="wave-bar"></div>
+                  <div class="wave-bar"></div>
+                  <div class="wave-bar"></div>
+                  <div class="wave-bar"></div>
+                  <div class="wave-bar"></div>
+                  <div class="wave-bar"></div>
+                  <div class="wave-bar"></div>
+                  <div class="wave-bar"></div>
+                </div>
+              </div>
+
+              <!-- Transcript Logs -->
+              <div class="transcript-logs-panel">
+                <span class="settings-label">ASR Real-Time Transcript</span>
+                <div id="transcriptBox" class="transcript-log-box">
+                  <span class="transcript-placeholder">Start speaking to see your text transcribed in real-time...</span>
+                </div>
+                <div id="interimBox" class="interim-text"></div>
+              </div>
+              
+            </div>
+          </div>
+          
+        </div>
+      </div>
+
+      <!-- STEP 4: Settings -->
+      <div id="sidebarTabSettings" class="wizard-pane tab-pane">
+        <div class="step-settings-layout">
+          
+          <!-- Left Column: AI Assistant Settings -->
+          <div class="settings-column-panel glass-panel">
+            <div class="panel-header">
+              <h2 class="panel-title">AI Assistant Settings</h2>
+            </div>
+            
+            <div class="styles-pane-scroller" style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+              <div class="settings-group">
+                <label class="settings-label">AI Provider</label>
+                <select id="aiProviderSelect" class="select-dropdown">
+                  <option value="google-ai-studio" selected>Google AI Studio</option>
+                  <option value="gemini-enterprise">Vertex AI (Gemini Enterprise)</option>
+                </select>
+              </div>
+
+              <div id="aiStudioConfig" class="settings-group">
+                <label class="settings-label">Gemini API Key</label>
+                <div class="api-key-container">
+                  <input type="password" id="geminiApiKey" class="text-input" placeholder="AIzaSy...">
+                </div>
+                <div class="api-key-help">Stored locally in your browser.</div>
+              </div>
+
+              <div id="vertexConfig" class="settings-group hidden" style="gap: 12px;">
+                <div class="settings-group" style="gap: 4px;">
+                  <label class="settings-label">GCP Project ID</label>
+                  <input type="text" id="vertexProjectId" class="text-input" placeholder="my-gcp-project-id">
+                </div>
+                
+                <div class="settings-group" style="gap: 4px;">
+                  <label class="settings-label">GCP Location</label>
+                  <input type="text" id="vertexLocation" class="text-input" placeholder="us-central1" value="us-central1">
+                </div>
+                
+                <div class="settings-group" style="gap: 4px;">
+                  <label class="settings-label">Authentication Method</label>
+                  <select id="vertexAuthMethod" class="select-dropdown">
+                    <option value="api-key" selected>API Key</option>
+                    <option value="service-account">Service Account JSON</option>
+                  </select>
+                </div>
+                
+                <div id="vertexApiKeyContainer" class="settings-group" style="gap: 4px;">
+                  <label class="settings-label">Vertex API Key</label>
+                  <input type="password" id="vertexApiKey" class="text-input" placeholder="API Key for Vertex">
+                </div>
+                
+                <div id="vertexServiceAccountContainer" class="settings-group hidden" style="gap: 4px;">
+                  <label class="settings-label">Service Account JSON</label>
+                  <textarea id="vertexServiceAccountJson" class="text-input" style="height: 120px; font-family: monospace; font-size: 11px; white-space: pre; overflow-x: auto; resize: vertical;" placeholder='{ "type": "service_account", ... }'></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Right Column: Speech Engine Settings -->
+          <div class="settings-column-panel glass-panel">
+            <div class="panel-header">
+              <h2 class="panel-title">Speech Engine Settings</h2>
+            </div>
+            
+            <div class="styles-pane-scroller" style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+              <div class="settings-group">
+                <span class="settings-label">Speech Engine</span>
+                <select id="engineSelect" class="select-dropdown">
+                  <option value="local">Local Model (Moonshine Tiny)</option>
+                  <option value="modal">Modal Cloud (Whisper Large)</option>
+                </select>
+              </div>
+              
+              <div class="settings-group">
+                <span class="settings-label">Input Microphone</span>
+                <select id="micDeviceSelect" class="select-dropdown">
+                  <option value="">Default System Microphone</option>
+                </select>
+              </div>
+              
+              <div class="settings-group" id="micTestGroup">
+                <span class="settings-label">Microphone Test</span>
+                <div style="display: flex; align-items: center; gap: 12px; margin-top: 4px;">
+                  <button id="micTestBtn" class="btn btn-secondary btn-sm" style="flex-shrink: 0; min-width: 90px;">Test Mic</button>
+                  <div class="mic-level-meter-bg" style="flex: 1; height: 12px; background: rgba(255,255,255,0.05); border-radius: 6px; overflow: hidden; border: 1px solid var(--border-color); position: relative;">
+                    <div id="micLevelMeterBar" class="mic-level-meter-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #10b981 60%, #eab308 85%, #f43f5e 100%); transition: width 0.05s ease;"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div id="modalUrlGroup" class="settings-group hidden">
+                <span class="settings-label">Modal Endpoint URL</span>
+                <input type="text" id="modalUrlInput" class="text-input" placeholder="https://username--teleprompter-asr-transcriber-transcribe.modal.run">
+              </div>
+            </div>
+          </div>
+          
+        </div>
       </div>
 
     </div>
@@ -469,8 +641,8 @@
           </div>
 
           <div class="coach-ai-feedback">
-            <span class="settings-label">
-              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-cyan); vertical-align: text-top; margin-right: 3px;"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+            <span class="settings-label settings-label-with-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
               AI Presentation Coach
             </span>
             <div class="ai-feedback-box">
@@ -488,19 +660,19 @@
       </div>
       
       <div class="modal-footer">
-        <button id="closeAnalyticsBtn2" class="btn btn-secondary" style="width: 100%;">Close</button>
+        <button id="closeAnalyticsBtn2" class="btn btn-secondary">Close</button>
       </div>
     </div>
   </div>
 
   <!-- Keyboard Shortcuts Modal -->
   <div id="shortcutsModal" class="modal-overlay hidden">
-    <div class="modal-content glass-panel animate-slide-up" style="max-width: 500px;">
+    <div class="modal-content glass-panel animate-slide-up">
       <div class="modal-header">
         <h2 class="modal-title">Keyboard Shortcuts</h2>
         <button id="closeShortcutsBtn" class="modal-close-btn" title="Close">&times;</button>
       </div>
-      <div class="modal-body" style="padding: 10px;">
+      <div class="modal-body">
         <div class="shortcuts-grid">
           <div class="shortcut-row"><span class="shortcut-key">Option + Space</span> <span class="shortcut-desc">Toggle Play / Pause</span></div>
           <div class="shortcut-row"><span class="shortcut-key">Option + Up</span> <span class="shortcut-desc">Nudge to previous sentence</span></div>
@@ -514,6 +686,113 @@
       </div>
     </div>
   </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const stepPrep = document.getElementById('stepBtnPrep');
+      const stepConfigure = document.getElementById('tabBtnStyles');
+      const stepPresent = document.getElementById('tabBtnTracking');
+      const stepSettings = document.getElementById('tabBtnSettings');
+      
+      const containerPrep = document.getElementById('stepPrepContainer');
+      const containerConfigure = document.getElementById('sidebarTabStyles');
+      const containerPresent = document.getElementById('sidebarTabTracking');
+      const containerSettings = document.getElementById('sidebarTabSettings');
+      
+      const deactivateAll = () => {
+        stepPrep.classList.remove('active');
+        stepConfigure.classList.remove('active');
+        stepPresent.classList.remove('active');
+        if (stepSettings) stepSettings.classList.remove('active');
+        
+        containerPrep.classList.remove('active');
+        containerConfigure.classList.remove('active');
+        containerPresent.classList.remove('active');
+        if (containerSettings) containerSettings.classList.remove('active');
+      };
+      
+      stepPrep.onclick = () => {
+        deactivateAll();
+        stepPrep.classList.add('active');
+        containerPrep.classList.add('active');
+      };
+      
+      stepConfigure.onclick = () => {
+        deactivateAll();
+        stepConfigure.classList.add('active');
+        containerConfigure.classList.add('active');
+      };
+      
+      stepPresent.onclick = () => {
+        deactivateAll();
+        stepPresent.classList.add('active');
+        containerPresent.classList.add('active');
+      };
+      
+      if (stepSettings) {
+        stepSettings.onclick = () => {
+          deactivateAll();
+          stepSettings.classList.add('active');
+          containerSettings.classList.add('active');
+        };
+      }
+      
+      // AI assistant drawer link to settings
+      const aiConfigLink = document.getElementById('aiConfigLink');
+      if (aiConfigLink && stepSettings) {
+        aiConfigLink.onclick = (e) => {
+          e.preventDefault();
+          stepSettings.click();
+        };
+      }
+      
+      // Button navigation handlers
+      const nextToConfigure = document.getElementById('nextToConfigure');
+      if (nextToConfigure) {
+        nextToConfigure.onclick = () => stepConfigure.click();
+      }
+      const nextToPresent = document.getElementById('nextToPresent');
+      if (nextToPresent) {
+        nextToPresent.onclick = () => stepPresent.click();
+      }
+      
+      // Dynamically updates the mini teleprompter preview card
+      const updatePreview = () => {
+        const previewBox = document.getElementById('livePreviewBox');
+        const previewText = document.getElementById('livePreviewText');
+        if (!previewBox || !previewText) return;
+        
+        const theme = document.getElementById('overlayThemeSelect').value;
+        const highlight = document.getElementById('overlayHighlightSelect').value;
+        const font = document.getElementById('overlayFontSelect').value;
+        const align = document.getElementById('overlayAlignSelect').value;
+        const opacity = document.getElementById('overlayOpacityRange').value;
+        const blur = document.getElementById('overlayBlurRange').value;
+        const fontSize = document.getElementById('fontSizeRange').value;
+        const mirror = document.getElementById('mirrorToggle').checked;
+        
+        previewBox.className = `live-preview-box theme-${theme} highlight-style-${highlight}`;
+        previewBox.style.setProperty('--overlay-bg-opacity', (opacity / 100).toFixed(2));
+        previewBox.style.setProperty('--overlay-blur', `${blur}px`);
+        
+        previewText.className = `live-preview-text font-${font} align-${align}`;
+        previewText.style.fontSize = `${fontSize}rem`;
+        previewText.style.transform = mirror ? 'scaleX(-1)' : 'none';
+      };
+      
+      // Sync preview window changes in real-time
+      const inputs = ['overlayThemeSelect', 'overlayHighlightSelect', 'overlayFontSelect', 'overlayAlignSelect', 'overlayOpacityRange', 'overlayBlurRange', 'fontSizeRange', 'mirrorToggle'];
+      inputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.addEventListener('change', updatePreview);
+          el.addEventListener('input', updatePreview);
+        }
+      });
+      
+      setTimeout(updatePreview, 600);
+    });
+  </script>
 
   <script type="module" src="control.js"></script>
 </body>
