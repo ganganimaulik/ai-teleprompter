@@ -459,9 +459,16 @@ app.whenReady().then(async () => {
       createControlWindow();
     } else {
       if (controlWindow) {
-        if (controlWindow.isMinimized()) controlWindow.restore();
-        controlWindow.show();
-        controlWindow.focus();
+        if (controlWindow.isMinimized()) {
+          controlWindow.restore();
+        } else {
+          // If the overlay window is visible, don't steal focus/switch spaces
+          const isOverlayActive = overlayWindow && !overlayWindow.isDestroyed() && overlayWindow.isVisible();
+          if (!isOverlayActive) {
+            controlWindow.show();
+            controlWindow.focus();
+          }
+        }
       }
     }
   });
