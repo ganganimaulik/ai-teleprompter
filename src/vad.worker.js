@@ -19,7 +19,11 @@ const MAX_NUM_PREV_BUFFERS = Math.ceil(SPEECH_PAD_SAMPLES / NEW_BUFFER_SIZE);
 
 const EAGER_PARTIAL_MS      = 500;
 const EAGER_PARTIAL_SAMPLES = EAGER_PARTIAL_MS * (SAMPLE_RATE / 1000);
-const MAX_PARTIAL_EMITS     = 8;
+const MAX_PARTIAL_EMITS     = 20;
+
+// Force-flush long continuous speech to keep the teleprompter moving
+const MAX_SPEECH_SEGMENT_MS      = 5000;
+const MAX_SPEECH_SEGMENT_SAMPLES = MAX_SPEECH_SEGMENT_MS * (SAMPLE_RATE / 1000);
 
 let silero_vad;
 try {
@@ -111,6 +115,26 @@ function flushAndTranscribe(overflow) {
   reset(overflow?.length ?? 0);
 }
 
+// Force-flush during continuous speech: emit accumulated audio as a final
+// segment and immediately restart recording so the next chunk begins cleanly.
+function midSpeechFlush() {
+  const segment = new Float32Array(_prevBufLen + bufferPointer);
+  let off = 0;
+  for (const b of prevBuffers) { segment.set(b, off); off += b.length; }
+  segment.set(BUFFER.subarray(0, bufferPointer), off);
+
+  self.postMessage({ type: 'segment', buffer: segment, isFinal: true, vadEmitTs: performance.now(), audioMs: Math.round(segment.length / SAMPLE_RATE * 1000) }, [segment.buffer]);
+
+  // Reset for next segment but stay in recording mode
+  prevBuffers = [];
+  _prevBufLen = 0;
+  bufferPointer     = 0;
+  partialEmitCount  = 0;
+  partialEmitLast   = 0;
+  postSpeechSamples = 0;
+  // Note: isRecording stays true — we are still in speech
+}
+
 self.onmessage = async (event) => {
   const { buffer } = event.data;
   if (!buffer) return;
@@ -140,7 +164,13 @@ self.onmessage = async (event) => {
     if (!isRecording) self.postMessage({ type: 'status', status: 'recording', message: 'Listening…' });
     isRecording = true;
     postSpeechSamples = 0;
-    maybeEmitPartial();
+
+    // Force-flush if continuous speech exceeds the max segment duration
+    if (bufferPointer >= MAX_SPEECH_SEGMENT_SAMPLES) {
+      midSpeechFlush();
+    } else {
+      maybeEmitPartial();
+    }
     return;
   }
 
