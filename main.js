@@ -136,7 +136,7 @@ function createControlWindow() {
   });
 }
 
-function createOverlayWindow() {
+function createOverlayWindow(settings) {
   if (overlayWindow) {
     overlayWindow.showInactive();
     return;
@@ -146,8 +146,8 @@ function createOverlayWindow() {
   const primaryDisplay = require('electron').screen.getPrimaryDisplay();
   const { width } = primaryDisplay.workAreaSize;
 
-  const overlayWidth = Math.round(width * 0.7);
-  const overlayHeight = 320;
+  const overlayWidth = settings && settings.overlayWidth ? settings.overlayWidth : Math.round(width * 0.7);
+  const overlayHeight = settings && settings.overlayHeight ? settings.overlayHeight : 320;
   const overlayX = Math.round((width - overlayWidth) / 2);
   const overlayY = 40; // near the webcam at the top
 
@@ -217,6 +217,21 @@ function setupIpcHandlers() {
   ipcMain.on('sync-state', (event, data) => {
     if (overlayWindow && !overlayWindow.isDestroyed()) {
       overlayWindow.webContents.send('state-updated', data);
+      
+      // Update window bounds if width or height settings changed
+      if (data && data.overlayWidth !== undefined && data.overlayHeight !== undefined) {
+        const [currentW, currentH] = overlayWindow.getSize();
+        if (currentW !== data.overlayWidth || currentH !== data.overlayHeight) {
+          const [x, y] = overlayWindow.getPosition();
+          const newX = Math.round(x + (currentW - data.overlayWidth) / 2);
+          overlayWindow.setBounds({
+            x: newX,
+            y: y,
+            width: data.overlayWidth,
+            height: data.overlayHeight
+          });
+        }
+      }
     }
   });
 
@@ -231,7 +246,7 @@ function setupIpcHandlers() {
   // Handle Control Panel Actions
   ipcMain.on('control-action', (event, action, data) => {
     if (action === 'open-overlay') {
-      createOverlayWindow();
+      createOverlayWindow(data ? data.settings : null);
       // Wait for window to load before passing script text
       overlayWindow.webContents.once('did-finish-load', () => {
         overlayWindow.webContents.send('control-event', 'load-script', data);
@@ -465,6 +480,34 @@ app.whenReady().then(async () => {
   globalShortcut.register('Option+=', () => {
     if (controlWindow && !controlWindow.isDestroyed()) {
       controlWindow.webContents.send('hotkey-triggered', 'opacity-up');
+    }
+  });
+
+  // Option+Shift+Left: Decrease overlay width
+  globalShortcut.register('Option+Shift+Left', () => {
+    if (controlWindow && !controlWindow.isDestroyed()) {
+      controlWindow.webContents.send('hotkey-triggered', 'overlay-width-down');
+    }
+  });
+
+  // Option+Shift+Right: Increase overlay width
+  globalShortcut.register('Option+Shift+Right', () => {
+    if (controlWindow && !controlWindow.isDestroyed()) {
+      controlWindow.webContents.send('hotkey-triggered', 'overlay-width-up');
+    }
+  });
+
+  // Option+Shift+Down: Decrease overlay height
+  globalShortcut.register('Option+Shift+Down', () => {
+    if (controlWindow && !controlWindow.isDestroyed()) {
+      controlWindow.webContents.send('hotkey-triggered', 'overlay-height-down');
+    }
+  });
+
+  // Option+Shift+Up: Increase overlay height
+  globalShortcut.register('Option+Shift+Up', () => {
+    if (controlWindow && !controlWindow.isDestroyed()) {
+      controlWindow.webContents.send('hotkey-triggered', 'overlay-height-up');
     }
   });
 

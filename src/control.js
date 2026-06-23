@@ -98,6 +98,8 @@ const state = {
     overlayBlur: 8,
     overlayHidden: false,
     overlayFaded: false,
+    overlayWidth: undefined,
+    overlayHeight: undefined,
     audioDeviceId: ''
   },
   
@@ -1099,6 +1101,8 @@ function syncStateToOverlay(scrollMode = 'snap') {
     overlayBlur: state.settings.overlayBlur,
     overlayHidden: state.settings.overlayHidden,
     overlayFaded: state.settings.overlayFaded,
+    overlayWidth: state.settings.overlayWidth,
+    overlayHeight: state.settings.overlayHeight,
     
     // Commands
     scrollMode: scrollMode
@@ -1547,6 +1551,12 @@ const dom = {
   overlayBlurRange:       $('overlayBlurRange'),
   overlayBlurVal:         $('overlayBlurVal'),
   overlayBlurGroup:       $('overlayBlurGroup'),
+  overlayWidthRange:      $('overlayWidthRange'),
+  overlayWidthVal:        $('overlayWidthVal'),
+  overlayWidthGroup:      $('overlayWidthGroup'),
+  overlayHeightRange:     $('overlayHeightRange'),
+  overlayHeightVal:       $('overlayHeightVal'),
+  overlayHeightGroup:     $('overlayHeightGroup'),
   micDeviceSelect:        $('micDeviceSelect'),
   micTestBtn:             $('micTestBtn'),
   micLevelMeterBar:       $('micLevelMeterBar')
@@ -1689,6 +1699,22 @@ function loadPersistedSettings() {
     const blur = state.settings.overlayBlur !== undefined ? state.settings.overlayBlur : 8;
     dom.overlayBlurRange.value = blur;
     dom.overlayBlurVal.textContent = `${blur}px`;
+  }
+  
+  if (state.settings.overlayWidth === undefined) {
+    state.settings.overlayWidth = Math.round(window.screen.width * 0.7);
+  }
+  if (state.settings.overlayHeight === undefined) {
+    state.settings.overlayHeight = 320;
+  }
+  if (dom.overlayWidthRange) {
+    dom.overlayWidthRange.max = window.screen.width;
+    dom.overlayWidthRange.value = state.settings.overlayWidth;
+    if (dom.overlayWidthVal) dom.overlayWidthVal.textContent = `${state.settings.overlayWidth}px`;
+  }
+  if (dom.overlayHeightRange) {
+    dom.overlayHeightRange.value = state.settings.overlayHeight;
+    if (dom.overlayHeightVal) dom.overlayHeightVal.textContent = `${state.settings.overlayHeight}px`;
   }
   
   toggleModalUrlVisibility();
@@ -1869,6 +1895,22 @@ function bindEvents() {
     const val = parseInt(e.target.value);
     dom.overlayBlurVal.textContent = `${val}px`;
     state.settings.overlayBlur = val;
+    syncStateToOverlay('instant');
+    savePersistedSettings();
+  };
+
+  dom.overlayWidthRange.oninput = (e) => {
+    const val = parseInt(e.target.value);
+    dom.overlayWidthVal.textContent = `${val}px`;
+    state.settings.overlayWidth = val;
+    syncStateToOverlay('instant');
+    savePersistedSettings();
+  };
+
+  dom.overlayHeightRange.oninput = (e) => {
+    const val = parseInt(e.target.value);
+    dom.overlayHeightVal.textContent = `${val}px`;
+    state.settings.overlayHeight = val;
     syncStateToOverlay('instant');
     savePersistedSettings();
   };
@@ -2385,6 +2427,38 @@ function setupIpcListeners() {
       if (dom.overlayOpacityRange) dom.overlayOpacityRange.value = val;
       if (dom.overlayOpacityVal) dom.overlayOpacityVal.textContent = `${val}%`;
       state.settings.overlayOpacity = val;
+      syncStateToOverlay('instant');
+      savePersistedSettings();
+    } else if (hotkey === 'overlay-width-down') {
+      let currentWidth = state.settings.overlayWidth !== undefined ? state.settings.overlayWidth : Math.round(window.screen.width * 0.7);
+      let val = Math.max(400, currentWidth - 40);
+      if (dom.overlayWidthRange) dom.overlayWidthRange.value = val;
+      if (dom.overlayWidthVal) dom.overlayWidthVal.textContent = `${val}px`;
+      state.settings.overlayWidth = val;
+      syncStateToOverlay('instant');
+      savePersistedSettings();
+    } else if (hotkey === 'overlay-width-up') {
+      let currentWidth = state.settings.overlayWidth !== undefined ? state.settings.overlayWidth : Math.round(window.screen.width * 0.7);
+      let val = Math.min(window.screen.width, currentWidth + 40);
+      if (dom.overlayWidthRange) dom.overlayWidthRange.value = val;
+      if (dom.overlayWidthVal) dom.overlayWidthVal.textContent = `${val}px`;
+      state.settings.overlayWidth = val;
+      syncStateToOverlay('instant');
+      savePersistedSettings();
+    } else if (hotkey === 'overlay-height-down') {
+      let currentHeight = state.settings.overlayHeight !== undefined ? state.settings.overlayHeight : 320;
+      let val = Math.max(150, currentHeight - 20);
+      if (dom.overlayHeightRange) dom.overlayHeightRange.value = val;
+      if (dom.overlayHeightVal) dom.overlayHeightVal.textContent = `${val}px`;
+      state.settings.overlayHeight = val;
+      syncStateToOverlay('instant');
+      savePersistedSettings();
+    } else if (hotkey === 'overlay-height-up') {
+      let currentHeight = state.settings.overlayHeight !== undefined ? state.settings.overlayHeight : 320;
+      let val = Math.min(1000, currentHeight + 20);
+      if (dom.overlayHeightRange) dom.overlayHeightRange.value = val;
+      if (dom.overlayHeightVal) dom.overlayHeightVal.textContent = `${val}px`;
+      state.settings.overlayHeight = val;
       syncStateToOverlay('instant');
       savePersistedSettings();
     }

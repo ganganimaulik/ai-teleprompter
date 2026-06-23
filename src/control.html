@@ -231,6 +231,22 @@
                 </div>
               </div>
 
+              <div class="settings-group" id="overlayWidthGroup">
+                <span class="settings-label">Overlay Width</span>
+                <div class="slider-container">
+                  <input type="range" id="overlayWidthRange" min="400" max="2000" step="20" value="1000">
+                  <span id="overlayWidthVal" class="slider-val">1000px</span>
+                </div>
+              </div>
+
+              <div class="settings-group" id="overlayHeightGroup">
+                <span class="settings-label">Overlay Height</span>
+                <div class="slider-container">
+                  <input type="range" id="overlayHeightRange" min="150" max="1000" step="10" value="320">
+                  <span id="overlayHeightVal" class="slider-val">320px</span>
+                </div>
+              </div>
+
 
             </div>
             
@@ -786,8 +802,8 @@
         previewText.style.transform = mirror ? 'scaleX(-1)' : 'none';
       };
       
-      // Sync preview window changes in real-time
-      const inputs = ['overlayThemeSelect', 'overlayHighlightSelect', 'overlayFontSelect', 'overlayAlignSelect', 'overlayOpacityRange', 'overlayBlurRange', 'fontSizeRange', 'mirrorToggle'];
+       // Sync preview window changes in real-time
+      const inputs = ['overlayThemeSelect', 'overlayHighlightSelect', 'overlayFontSelect', 'overlayAlignSelect', 'overlayOpacityRange', 'overlayBlurRange', 'fontSizeRange', 'mirrorToggle', 'overlayWidthRange', 'overlayHeightRange'];
       inputs.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
